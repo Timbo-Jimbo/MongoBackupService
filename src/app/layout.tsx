@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import "@backend/service-initialisation";
+
+import { cn } from "@lib/utils";
+import LoginExtender from "@/components/login-extender";
 import { AR_One_Sans as Font } from "next/font/google";
 import "./globals.css";
-import { cn } from "@lib/utils";
-import LoginExtender from "@lib/login-extender";
 
 const font = Font({
   subsets: ["latin"],

@@ -5,11 +5,11 @@ import { ButtonWithSpinner } from "@comp/button"
 import { Input } from "@comp/input"
 import { Label } from "@comp/label"
 import { Alert, AlertDescription, AlertTitle } from "@comp/alert"
-import { InfoCircledIcon } from "@radix-ui/react-icons"
+import { ExclamationTriangleIcon, InfoCircledIcon } from "@radix-ui/react-icons"
 import { FormEvent, useState } from "react"
 
 export function LoginForm(
-  {onLogin}: {onLogin: (apiKey: string) => Promise<void>}
+  {onLogin, loginErrorVisible}: {onLogin: (apiKey: string) => Promise<void>, loginErrorVisible: boolean}
 ) {
   const [isLoading, setIsLoading] = useState<boolean>(false)
  
@@ -38,6 +38,15 @@ export function LoginForm(
           </CardHeader>
 
           <CardContent className="grid gap-4">
+            {loginErrorVisible && (
+              <Alert variant="destructive">
+                <ExclamationTriangleIcon className="h-4 w-4" />
+                <AlertTitle>API Key Incorrect</AlertTitle>
+                <AlertDescription>
+                  Please try again.
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="apiKey">API Key</Label>
               <Input id="apiKey" type="password" required />
