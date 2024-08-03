@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { AR_One_Sans as Font } from "next/font/google";
 import "./globals.css";
+import { cn } from "@lib/utils";
+import LoginExtender from "@lib/login-extender";
 
-const inter = Inter({ subsets: ["latin"] });
+const font = Font({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+})
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -14,9 +19,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html lang="en" className="dark">
+      <body className={cn(
+        "min-h-screen bg-background antialiased",
+        font.className,
+      )}>
+        <LoginExtender>
+          {children}
+        </LoginExtender>
+      </body>
     </html>
   );
 }
