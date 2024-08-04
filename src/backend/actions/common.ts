@@ -7,15 +7,14 @@ type ServerAction<T extends any[], R> = (...args: T) => Promise<R>;
 
 export function withAuthOrRedirect<T extends any[], R>(
   action: ServerAction<T, R>
-): ServerAction<T, R> {
-  return async (...args: T): Promise<R> => {
-    validAuthOrRedirect();
+): ServerAction<T, R | undefined> {
+  return async (...args: T): Promise<R | undefined> => {
+    
+    validAuthOrRedirect();      
     await mockDelay();
-
     return action(...args);
   };
 }
-
 
 export function validAuthOrRedirect(redirectTo?: string | undefined) {
 

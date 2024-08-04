@@ -11,8 +11,8 @@ export function TaskCard({
     isLoading 
 } : { 
     task: Task,
-    onCompleteClick: (task:Task) => void,
-    onDeleteClick: (task:Task) => void,
+    onCompleteClick: (taskId: number) => void,
+    onDeleteClick: (taskId: number) => void,
     isLoading: boolean
 }) {
     return (
@@ -37,28 +37,28 @@ export function TaskCard({
                         </Badge>
                     </div>
                 )}
-                {task.status == TaskStatus.Completed && (
+                {task.status != TaskStatus.Pending && (
                     <div className="flex flex-row flex-grow justify-end place-items-center">
-                        <Badge variant={"secondary"} >
-                            Completed
+                        <Badge variant={"secondary"} className="capitalize">
+                         {task.status}
                         </Badge>
                     </div>
                 )}
                 <div className="flex flex-row flex-grow justify-end place-items-center">
                     {task.status == TaskStatus.Pending && (
-                        <ButtonWithSpinner className="w-min" onClick={() => onCompleteClick(task)} isLoading={isLoading}>
+                        <ButtonWithSpinner className="w-min" onClick={() => onCompleteClick(task.id)} isLoading={isLoading}>
                             {isLoading ? "Completing..." : "Complete"}
                         </ButtonWithSpinner>
                     )}
-                    {task.status == TaskStatus.Completed &&(
-                        <ButtonWithSpinner variant={"destructive"} onClick={() => onDeleteClick(task)} isLoading={isLoading}>
+                    {(task.status == TaskStatus.Completed || task.status == TaskStatus.Cancelled) &&(
+                        <ButtonWithSpinner variant={"destructive"} onClick={() => onDeleteClick(task.id)} isLoading={isLoading}>
                             {isLoading ? "Deleting..." : "Delete"}
                         </ButtonWithSpinner>    
                     )}
                 </div>
             </div>
             <div className="flex flex-row flex-grow">
-                <Progress className="w-full" value={25} max={100} />
+                <Progress className="w-full duration-1000" value={task.progress} max={100} />
             </div>
         </div>
     );

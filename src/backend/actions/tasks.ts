@@ -1,11 +1,13 @@
 'use server'
 
-import { database } from "@backend/db/database.service";
+import { database } from "@backend/db";
 import { withAuthOrRedirect } from "./common"
 import { InsertTask, tasks, TaskStatus, TaskType } from "@backend/db/task.schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
-export const getAllTasks = withAuthOrRedirect(async () => {
+export const getAllTasks = withAuthOrRedirect(async (refreshIds?: number[] | undefined) => {
+    
+    if(refreshIds) return await database.select().from(tasks).where(inArray(tasks.id, refreshIds)).execute();
     return await database.query.tasks.findMany();
 });
 

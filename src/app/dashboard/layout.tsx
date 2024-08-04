@@ -9,6 +9,5 @@ export default async function DashboardLayout({
 }>) {
 
   validAuthOrRedirect();
-
   return children;
 }

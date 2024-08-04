@@ -17,10 +17,11 @@ export const tasks = sqliteTable('tasks', {
     id: integer('id').primaryKey({autoIncrement: true}),
     type: text('type', { enum: [TaskType.Backup, TaskType.Restore, TaskType.Seed, TaskType.DeleteBackup] }).notNull(),
     status: text('status', { enum: [TaskStatus.Pending, TaskStatus.Completed, TaskStatus.Cancelled] }).notNull().default(TaskStatus.Pending),
+    progress: integer('progress').notNull().default(0),
     latestUpdate: text('latest-update'),
     startedAt: integer('started_at', {mode: 'timestamp'}).notNull().$default(() => new Date()),
     completedAt: integer('completed_at', {mode: 'timestamp'}),
-    updatedAt: integer('updated_at', {mode: 'timestamp'}).notNull().$default(() => new Date()).$onUpdate(() => new Date())
+    updatedAt: integer('updated_at', {mode: 'timestamp'}).notNull().$default(() => new Date()).$onUpdate(() => new Date()),
 });
 
 export type Task = typeof tasks.$inferSelect;

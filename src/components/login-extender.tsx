@@ -1,7 +1,7 @@
 'use client'
 
 import { extendAnyLogin } from "@actions/auth";
-import { useInterval } from "../lib/use-interval";
+import { useInterval } from "@lib/use-interval";
 
 export default function LoginExtender(
     {children}: {children: React.ReactNode}
