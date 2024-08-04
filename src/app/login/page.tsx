@@ -3,13 +3,14 @@
 import { login } from "@actions/auth";
 import { LoginForm } from "./login-form";
 import { Alert, AlertTitle, AlertDescription } from "@comp/alert";
-import { ExclamationTriangleIcon, InfoCircledIcon } from "@radix-ui/react-icons";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { ExclamationTriangleIcon } from "@heroicons/react/20/solid";
 
-export default function Login() {
+export default function LoginPage() {
 
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const redirect = searchParams.get("redirect");
   const loginPrompt = searchParams.get("login-prompt") && redirect !== "/";
@@ -17,8 +18,9 @@ export default function Login() {
   const [loginFailed, setLoginFailed] = useState(false);
 
   const onLogin = async (apiKey: string) => {
-    const result = await login(apiKey, redirect);
-    if(!result) setLoginFailed(true);
+    const loginResult = await login(apiKey, redirect);
+    if(!loginResult.success) setLoginFailed(true);
+    else router.push(loginResult.redirect);
   }
 
   return (

@@ -1,5 +1,6 @@
 "use server"
 
+import ClientSideQueryClientProvider from "@/components/client-side-query-client-provider";
 import { validAuthOrRedirect } from "@actions/common";
 
 export default async function DashboardLayout({
@@ -9,5 +10,10 @@ export default async function DashboardLayout({
 }>) {
 
   validAuthOrRedirect();
-  return children;
+
+  return (
+    <ClientSideQueryClientProvider>
+      {children}
+    </ClientSideQueryClientProvider>
+  );
 }

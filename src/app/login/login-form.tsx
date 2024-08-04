@@ -5,8 +5,8 @@ import { ButtonWithSpinner } from "@comp/button"
 import { Input } from "@comp/input"
 import { Label } from "@comp/label"
 import { Alert, AlertDescription, AlertTitle } from "@comp/alert"
-import { ExclamationTriangleIcon, InfoCircledIcon } from "@radix-ui/react-icons"
 import { FormEvent, useState } from "react"
+import { ExclamationTriangleIcon, InformationCircleIcon } from "@heroicons/react/20/solid"
 
 export function LoginForm(
   {onLogin, loginErrorVisible}: {onLogin: (apiKey: string) => Promise<void>, loginErrorVisible: boolean}
@@ -61,7 +61,7 @@ export function LoginForm(
       </form>
 
       <Alert>
-        <InfoCircledIcon className="h-4 w-4" />
+        <InformationCircleIcon className="h-4 w-4" />
         <AlertTitle>API Key...?</AlertTitle>
         <AlertDescription>
           Your API key is defined as an environment variable on this service.

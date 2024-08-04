@@ -4,14 +4,12 @@ import { cn } from "@lib/utils";
 import LoginExtender from "@/components/login-extender";
 import { AR_One_Sans as Font } from "next/font/google";
 import "./globals.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { Suspense } from "react";
 
 const font = Font({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 })
-
-const queryClient = new QueryClient();
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -30,11 +28,11 @@ export default function RootLayout({
         "min-h-screen bg-background antialiased",
         font.className,
       )}>
-        <QueryClientProvider client={queryClient}>
           <LoginExtender>
-            {children}
+            <Suspense>
+              {children}
+            </Suspense>
           </LoginExtender>
-        </QueryClientProvider>
       </body>
     </html>
   );

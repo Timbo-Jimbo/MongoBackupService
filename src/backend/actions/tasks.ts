@@ -20,7 +20,7 @@ export const addRandomTask = withAuthOrRedirect(async () => {
     }).returning())[0];
 });
 
-export const updateTask = withAuthOrRedirect(async (id: number, update: Partial<InsertTask>) => {
+export const updateTask = withAuthOrRedirect(async ({id,  update }: {id: number, update: Partial<InsertTask>} ) => {
     const result = await database.update(tasks).set(update).where(eq(tasks.id, id)).returning();
     return result[0];
 });

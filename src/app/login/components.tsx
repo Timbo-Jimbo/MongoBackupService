@@ -3,26 +3,20 @@
 import { logout } from "@actions/auth";
 import { Button, ButtonWithSpinner } from "@comp/button";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 export function LogoutButton() {
 
     const [isLoading, setIsLoading] = useState<boolean>(false)
     
-    async function onClick() {
-
+    const onClickCallback = useCallback(async () => {
         setIsLoading(true)
-        try {
-            await logout()
-        }
-        catch (error) {}
-        finally {
+        await logout();
         setIsLoading(false);
-        }
-    }
+    },[]);
 
     return (
-        <ButtonWithSpinner isLoading={isLoading} onClick={onClick}>
+        <ButtonWithSpinner isLoading={isLoading} onClick={onClickCallback}>
             {isLoading ? "Signing out..." : "Sign out"}
         </ButtonWithSpinner>
     );

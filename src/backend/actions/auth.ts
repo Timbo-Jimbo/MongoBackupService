@@ -5,17 +5,33 @@ import env from "@lib/env";
 import { mockDelay } from "@lib/utils";
 import { redirect } from "next/navigation";
 
-export const login = async (apiKey: string, redirectPath?: string | null) => {
+type LoginFailResult = {
+    success: false;
+}
+
+type LoginSuccessResult = {
+    success: true;
+    redirect: string;
+}
+
+type LoginResult = LoginFailResult | LoginSuccessResult;
+
+export const login = async (apiKey: string, redirectPath?: string | null) : Promise<LoginResult> => {
 
     await mockDelay();
     
     if(apiKey == env.apiKey){
         UserAuth.setApiKey(apiKey);
-        redirect(redirectPath || "/");
+
+        return {
+            success: true,
+            redirect: redirectPath || "/dashboard"
+        };
     }
-    else
-    {
-        return false;
+    else {
+        return {
+            success: false,
+        };
     }
 };
 
@@ -24,8 +40,8 @@ export const extendAnyLogin = async () => {
 };
 
 export const logout = async () => {
+
     await mockDelay();
-    
     UserAuth.clear();
     redirect("/login");
 };

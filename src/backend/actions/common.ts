@@ -4,11 +4,12 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 type ServerAction<T extends any[], R> = (...args: T) => Promise<R>;
+type Maybe<R> = R | undefined;
 
 export function withAuthOrRedirect<T extends any[], R>(
   action: ServerAction<T, R>
-): ServerAction<T, R | undefined> {
-  return async (...args: T): Promise<R | undefined> => {
+): ServerAction<T, Maybe<R>> {
+  return async (...args: T): Promise<Maybe<R>> => {
     
     validAuthOrRedirect();      
     await mockDelay();
@@ -36,4 +37,20 @@ export function validAuthOrRedirect(redirectTo?: string | undefined) {
 
         redirect("/login?" + searchParams.toString());
     }
+}
+
+export function censorMongoDbConnectionUri(url: string): string {
+  // Regular expression to match MongoDB connection URL
+  const regex = /^(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)@(.+)$/;
+
+  // Replace auth details with asterisks
+  return url.replace(regex, (_, protocol, username, password, rest) => {
+    const censoredUsername = username.length > 3 
+      ? username.slice(0, 3) + '*'.repeat(username.length - 3)
+      : '*'.repeat(username.length);
+    
+    const censoredPassword = '*'.repeat(password.length);
+
+    return `${protocol}${censoredUsername}:${censoredPassword}@${rest}`;
+  });
 }

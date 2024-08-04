@@ -57,7 +57,7 @@ Button.displayName = "Button"
 
 export { Button, buttonVariants }
 
-const ButtonWithSpinner = React.forwardRef<HTMLButtonElement, {isLoading: boolean, children: React.ReactNode} & ButtonProps>(
+const ButtonWithSpinner = React.forwardRef<HTMLButtonElement, {isLoading?: boolean, children?: React.ReactNode} & ButtonProps>(
   ({isLoading, children, ...props}, ref) => (
     <Button {...props} disabled={isLoading} ref={ref}>
       {children}
