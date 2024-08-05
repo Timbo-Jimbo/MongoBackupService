@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, SQLiteUpdateSetSource, text } from "drizzle-orm/sqlite-core";
 
 export enum TaskStatus {
     Pending = 'pending',
@@ -7,7 +7,8 @@ export enum TaskStatus {
 }
 
 export enum TaskType {
-    Backup = 'backup',
+    ScheduledBackup = 'scheduled_backup',
+    ManualBackup = 'manual_backup',
     Restore = 'restore',
     Seed = 'seed',
     DeleteBackup = 'delete_backup'
@@ -15,7 +16,7 @@ export enum TaskType {
 
 export const tasks = sqliteTable('tasks', {
     id: integer('id').primaryKey({autoIncrement: true}),
-    type: text('type', { enum: [TaskType.Backup, TaskType.Restore, TaskType.Seed, TaskType.DeleteBackup] }).notNull(),
+    type: text('type', { enum: [TaskType.ScheduledBackup, TaskType.ManualBackup, TaskType.Restore, TaskType.Seed, TaskType.DeleteBackup] }).notNull(),
     status: text('status', { enum: [TaskStatus.Pending, TaskStatus.Completed, TaskStatus.Cancelled] }).notNull().default(TaskStatus.Pending),
     progress: integer('progress').notNull().default(0),
     latestUpdate: text('latest-update'),
@@ -26,4 +27,5 @@ export const tasks = sqliteTable('tasks', {
 
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = typeof tasks.$inferInsert;
+export type UpdateTask = SQLiteUpdateSetSource<typeof tasks>
 

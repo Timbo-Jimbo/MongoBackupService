@@ -1,5 +1,8 @@
+import { database } from '@backend/db';
+import { InsertTask, tasks, TaskStatus, TaskType, UpdateTask } from '@backend/db/task.schema';
 import { UserAuth } from '@backend/user-auth';
 import { mockDelay } from '@lib/utils';
+import { eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -53,4 +56,70 @@ export function censorMongoDbConnectionUri(url: string): string {
 
     return `${protocol}${censoredUsername}:${censoredPassword}@${rest}`;
   });
+}
+
+export class TaskUpdateDispatcher 
+{
+  private queuedUpdate?: UpdateTask;
+  private activeDispatchLoop?: Promise<void>;
+
+  private constructor(
+    private readonly taskId: number
+  ) {}
+
+  static async createNewTask({ type, initialTaskUpdate = "Starting up..." }: { type: TaskType, initialTaskUpdate?: string })
+  {
+    const insertResponse = await database.insert(tasks).values([{
+      type: type,
+      status: TaskStatus.Pending,
+      latestUpdate: initialTaskUpdate,
+    }]).returning();
+
+    const taskId = insertResponse[0].id;  
+    return {
+      taskId,
+      dispatcher: new TaskUpdateDispatcher(taskId)
+    };
+  }
+
+  queueNextUpdate(update: UpdateTask)
+  {
+      this.queuedUpdate = update;
+      this.dispatchUpdate();
+  }
+
+  async completeTask({ completionState, latestUpdate }: { completionState: TaskStatus.Cancelled | TaskStatus.Completed, latestUpdate: string })
+  {
+    this.queueNextUpdate({
+      status: completionState,
+      progress: 100,
+      latestUpdate: latestUpdate,
+      completedAt: new Date()
+    });
+
+    await this.activeDispatchLoop;
+  }
+
+  private dispatchUpdate() {
+
+    if(this.activeDispatchLoop) return;
+    this.activeDispatchLoop = this.dispatchLoop();
+  }
+
+  private async dispatchLoop() 
+  {
+    try 
+    {
+      while(this.queuedUpdate) {
+      
+        const update = this.queuedUpdate;
+        this.queuedUpdate = undefined;
+        await database.update(tasks).set(update).where(eq(tasks.id, this.taskId));
+      }
+    }
+    finally
+    {
+      this.activeDispatchLoop = undefined;
+    }
+  }
 }

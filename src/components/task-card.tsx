@@ -47,7 +47,7 @@ export function TaskCard({
               <h1 className="text-lg font-semibold capitalize">{task.type}</h1>
               {task.status == TaskStatus.Pending && (
                 <div className="flex flex-row flex-grow justify-end place-items-center">
-                  <Badge variant={"outline"} >
+                  <Badge variant={"outline"} className="animate-pulse" >
                     Pending
                   </Badge>
                 </div>

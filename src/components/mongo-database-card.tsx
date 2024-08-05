@@ -1,9 +1,12 @@
-import { getMongoDatabaseConnectionStatus } from "@actions/mongo";
+import { getMongoDatabaseConnectionStatus, startManualBackup } from "@actions/mongo";
 import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongodb-instance.schema";
+import { Task } from "@backend/db/task.schema";
 import { Badge } from "@comp/badge";
+import { ButtonWithSpinner } from "@comp/button";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { SignalIcon, SignalSlashIcon } from "@heroicons/react/20/solid";
-import { useQuery } from "@tanstack/react-query";
+import { cn } from "@lib/utils";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function MongoDatabaseCard({
   mongoDatabase,
@@ -11,11 +14,22 @@ export function MongoDatabaseCard({
   mongoDatabase: MongoDatabaseCensored,
 }) {
 
+  const queryClient = useQueryClient();
+
   const dbStatusQuery = useQuery({
     queryKey: ["mongoDatabaseStatus", mongoDatabase.id],
     queryFn: () => getMongoDatabaseConnectionStatus(mongoDatabase.id),
     refetchInterval: (query) => query.state.data?.connectionStatus != MongoDatabaseConnection.Online ? 5000 : 10000,
   })
+
+  const startBackupMutation = useMutation({
+    mutationFn: async () => await startManualBackup(mongoDatabase.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["tasks"]
+      });
+    }
+  });
 
   return (
     <div className="flex flex-col gap-2">
@@ -28,13 +42,16 @@ export function MongoDatabaseCard({
               Pinging...
             </Badge>
           )}
-          {dbStatusQuery.data?.connectionStatus == MongoDatabaseConnection.Online && (
+          {dbStatusQuery.data && dbStatusQuery.data.connectionStatus == MongoDatabaseConnection.Online && (
             <Badge variant={"secondary"} >
-              {dbStatusQuery.isFetching ? <LoadingSpinner className="w-4 h-4 mr-2 -ml-1 text-green-500" /> : <SignalIcon className="w-4 h-4 mr-2 -ml-1 text-green-500" /> }
+              <SignalIcon className={cn([
+                "w-4 h-4 mr-2 -ml-1 text-green-500",
+                (dbStatusQuery.isFetching && "animate-pulse")
+              ])} />
               Online
             </Badge>
           )}
-          {dbStatusQuery.data?.connectionStatus != MongoDatabaseConnection.Online && (
+          {dbStatusQuery.data && dbStatusQuery.data.connectionStatus != MongoDatabaseConnection.Online && (
             <Badge variant={"secondary"}>
               {dbStatusQuery.isFetching ? <LoadingSpinner className="w-4 h-4 mr-2 -ml-1 text-red-500" /> : <SignalSlashIcon className="w-4 h-4 mr-2 -ml-1 text-red-500" /> }
               {dbStatusQuery.data?.connectionStatus}
@@ -43,6 +60,12 @@ export function MongoDatabaseCard({
         </div>
       </div>
       <p className="text-sm opacity-50">{mongoDatabase.censoredConnectionUri}</p>
+      
+      <div className="flex flex-row flex-grow justify-end place-items-center">
+          <ButtonWithSpinner className="w-min" onClick={() => startBackupMutation.mutate()} isLoading={startBackupMutation.isPending}>
+            {startBackupMutation.isPending ? "Starting..." : "Backup now"}
+          </ButtonWithSpinner>
+      </div>
     </div>
   );
 }

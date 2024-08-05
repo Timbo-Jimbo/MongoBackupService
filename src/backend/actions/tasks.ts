@@ -14,7 +14,7 @@ export const getAllTasks = withAuthOrRedirect(async (refreshIds?: number[] | und
 export const addRandomTask = withAuthOrRedirect(async () => {
 
     return (await database.insert(tasks).values({
-        type: TaskType.Backup,
+        type: TaskType.ScheduledBackup,
         latestUpdate: "Backup the database, a fake task!",
         status: TaskStatus.Pending,
     }).returning())[0];
