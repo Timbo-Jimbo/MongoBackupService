@@ -1,5 +1,5 @@
 import { database } from '@backend/db';
-import { InsertTask, tasks, TaskStatus, TaskType, UpdateTask } from '@backend/db/task.schema';
+import { tasks, TaskStatus, TaskType, UpdateTask } from '@backend/db/task.schema';
 import { UserAuth } from '@backend/user-auth';
 import { mockDelay } from '@lib/utils';
 import { eq } from 'drizzle-orm';
@@ -48,13 +48,7 @@ export function censorMongoDbConnectionUri(url: string): string {
 
   // Replace auth details with asterisks
   return url.replace(regex, (_, protocol, username, password, rest) => {
-    const censoredUsername = username.length > 3 
-      ? username.slice(0, 3) + '*'.repeat(username.length - 3)
-      : '*'.repeat(username.length);
-    
-    const censoredPassword = '*'.repeat(password.length);
-
-    return `${protocol}${censoredUsername}:${censoredPassword}@${rest}`;
+    return `${protocol}******@${rest}`;
   });
 }
 
@@ -67,12 +61,11 @@ export class TaskUpdateDispatcher
     private readonly taskId: number
   ) {}
 
-  static async createNewTask({ type, initialTaskUpdate = "Starting up..." }: { type: TaskType, initialTaskUpdate?: string })
+  static async createNewTask({ mongoDatabaseId, type }: { mongoDatabaseId: number, type: TaskType, initialTaskUpdate?: string })
   {
     const insertResponse = await database.insert(tasks).values([{
+      mongoDatabaseId: mongoDatabaseId,
       type: type,
-      status: TaskStatus.Pending,
-      latestUpdate: initialTaskUpdate,
     }]).returning();
 
     const taskId = insertResponse[0].id;  
@@ -88,12 +81,14 @@ export class TaskUpdateDispatcher
       this.dispatchUpdate();
   }
 
-  async completeTask({ completionState, latestUpdate }: { completionState: TaskStatus.Cancelled | TaskStatus.Completed, latestUpdate: string })
+  async completeTask({ completionState, message }: { completionState: TaskStatus.Failed | TaskStatus.Completed, message: string })
   {
     this.queueNextUpdate({
       status: completionState,
-      progress: 100,
-      latestUpdate: latestUpdate,
+      progress: {
+        hasProgressValues: false,
+        message: message,
+      },
       completedAt: new Date()
     });
 

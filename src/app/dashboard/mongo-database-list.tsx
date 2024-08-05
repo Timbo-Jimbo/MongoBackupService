@@ -9,7 +9,7 @@ import { Label } from "@comp/label";
 import { Separator } from "@comp/separator";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { InsertMongoDatabase, MongoDatabaseCensored } from "@backend/db/mongodb-instance.schema";
+import { InsertMongoDatabase, MongoDatabaseCensored } from "@backend/db/mongodb-database.schema";
 import { FormEvent, useState } from "react";
 
 export function MongoDatabaseList() {
@@ -90,7 +90,6 @@ export function MongoDatabaseList() {
               databaseName: formData.get("database-name") as string,
             });
           }}>
-              
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="reference-name" className="text-right">
@@ -122,6 +121,24 @@ export function MongoDatabaseList() {
                   className="col-span-3"
                 />
               </div>
+              {/* <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="reference-color-hex" className="text-right">
+                  Reference Color
+                </Label>
+                <Input
+                  name="reference-color-hex"
+                  placeholder="my-database"
+                  type="hidden"
+                />
+                <div className="col-span-3 flex flex-row gap-2 place-content-between">
+                  {["#dd1111", "#ff6600", "#ffee33", "#00d629", "#11deee"].map((color) => (
+                    <div key={color} className="w-full h-6 rounded-full ring-4 ring-white">
+                      <input type="radio" name="reference-color-hex" value={color} className="hidden" />
+                      <div className="w-full h-full rounded-full" style={{backgroundColor: color}}></div>
+                    </div>
+                  ))}
+                </div>
+              </div> */}
             </div>
             <DialogFooter>
               <ButtonWithSpinner type="submit" isLoading={addDatabaseMutation.isPending}>Add</ButtonWithSpinner>

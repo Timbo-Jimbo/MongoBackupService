@@ -43,6 +43,13 @@
       "when": 1722782639426,
       "tag": "0005_fearless_kylun",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1722860029155,
+      "tag": "0006_purple_vindicator",
+      "breakpoints": true
     }
   ]
 }

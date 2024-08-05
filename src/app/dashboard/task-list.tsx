@@ -1,8 +1,8 @@
 "use client"
 
 import { TaskCard } from "@/components/task-card";
-import { getAllTasks, addRandomTask } from "@actions/tasks";
-import { TaskStatus, Task } from "@backend/db/task.schema";
+import { getAllTasks } from "@actions/tasks";
+import { TaskStatus, Task, TaskType } from "@backend/db/task.schema";
 import { ButtonWithSpinner } from "@comp/button";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { Separator } from "@radix-ui/react-separator";
@@ -19,16 +19,7 @@ export function TaskList() {
       return await getAllTasks();
     },
     refetchInterval: (query) =>{
-      return !query.state.data || query.state.data.some(t => t.status === TaskStatus.Pending) ? 1500 : false;
-    }
-  });
-
-  const addRandomTaskMutation = useMutation({
-    mutationFn: addRandomTask,
-    onSuccess: (task) => {
-      queryClient.setQueryData(getTasksQueryKey, (tasks: Task[]) => {
-        return [...tasks, task];
-      });
+      return !query.state.data || query.state.data.some(t => t.status === TaskStatus.Running) ? 500 : false;
     }
   });
 
@@ -53,9 +44,6 @@ export function TaskList() {
           {index < tasks.length - 1 && <Separator />}
         </div>
       ))}
-      <ButtonWithSpinner isLoading={addRandomTaskMutation.isPending} onClick={() => addRandomTaskMutation.mutate()}>
-        {addRandomTaskMutation.isPending ? "Adding task..." : "Add random task"}
-      </ButtonWithSpinner>
     </div>
   );
 }

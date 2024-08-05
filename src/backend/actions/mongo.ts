@@ -2,7 +2,7 @@
 
 import { database } from "@backend/db";
 import { censorMongoDbConnectionUri, TaskUpdateDispatcher, withAuthOrRedirect } from "./common";
-import { InsertMongoDatabase, MongoDatabase, MongoDatabaseCensored, mongoDatabases, MongoDatabaseConnection } from "@backend/db/mongodb-instance.schema";
+import { InsertMongoDatabase, MongoDatabase, MongoDatabaseCensored, mongoDatabases, MongoDatabaseConnection } from "@backend/db/mongodb-database.schema";
 import { MongoClient } from "mongodb"
 import { eq } from "drizzle-orm";
 import { InsertTask, tasks, TaskStatus, TaskType } from "@backend/db/task.schema";
@@ -68,7 +68,6 @@ export const getMongoDatabaseConnectionStatus = withAuthOrRedirect(async (mongoD
 
 export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: number) => {
     
-
     const mongoDatabase = await database.query.mongoDatabases.findFirst({ 
         where: eq(mongoDatabases.id, mongoDatabaseId),
         columns: {
@@ -82,8 +81,9 @@ export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: numb
 
     console.log("🔄 User initiated backup for database", mongoDatabase.databaseName);
 
-    const { taskId, dispatcher: taskUpdateDispatcher } = await TaskUpdateDispatcher.createNewTask({ 
-        type: TaskType.ScheduledBackup,
+    const { taskId, dispatcher: taskUpdateDispatcher } = await TaskUpdateDispatcher.createNewTask({
+        mongoDatabaseId: mongoDatabaseId,
+        type: TaskType.ManualBackup,
     });
 
     const executeManualBackup = async() => {
@@ -115,9 +115,7 @@ export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: numb
                 }    
             };
             
-            taskUpdateDispatcher.queueNextUpdate({
-                latestUpdate: "Gathering DB Collection information",
-            });
+            taskUpdateDispatcher.queueNextUpdate({ progress: { hasProgressValues: false,  message: "Gathering info" } });
 
             const collectionWork = await getCollectionWork();
 
@@ -125,16 +123,14 @@ export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: numb
             mkdirSync(backupFolder, { recursive: true });
 
             
-            taskUpdateDispatcher.queueNextUpdate({
-                latestUpdate: "Initiating backup",
-            });
+            taskUpdateDispatcher.queueNextUpdate({ progress: { hasProgressValues: false,  message: "Initiating backup..." } });
 
             const childProcess = spawn("mongodump", [
                 mongoDatabase.connectionUri,
                 "--authenticationDatabase=admin",
                 "--db=" + mongoDatabase.databaseName,
                 "--gzip",
-                `--archive=${backupFolder}/backup-manual_task-${taskId}.tgz`,
+                `--archive=${backupFolder}/backup-manual_task-${taskId}.gz`,
                 "--verbose"
             ], { stdio: 'pipe' });
 
@@ -167,7 +163,6 @@ export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: numb
 
                             // Example line: 
                             // "2024-08-05T18:28:42.444+1000    [........................]     db-name.col-name  0/294  (0.0%)"
-                            // "2024-08-05T20:00:27.247+1000  [########################]  game-server-dev.mails  5/5  (100.0%)"
                             if(line.includes("[") && line.includes("]"))
                             {
                                 const rawDateTime = lineParts[0];
@@ -233,8 +228,13 @@ export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: numb
                         const allDone = collectionWork.every(c => c.backedUpCount === c.totalCount);
 
                         taskUpdateDispatcher.queueNextUpdate({
-                            latestUpdate: allDone ? `Wrapping up...` : `Backing up database. ${backedUpDocs}/${totalDocs} Documents backed up.`,
-                            progress: collectionWork.reduce((acc, c) => acc + c.backedUpCount, 0) / collectionWork.reduce((acc, c) => acc + c.totalCount, 0) * 100,
+                            progress: {
+                                message: `Backing up database.`,
+                                hasProgressValues: true,
+                                current: backedUpDocs,
+                                total: totalDocs,
+                                countedThingName: "Documents"
+                            }
                         });
                     }
                 };
@@ -274,9 +274,9 @@ export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: numb
 
             console.log("✅ Backup completed");
         
-            await taskUpdateDispatcher.completeTask({
+            await taskUpdateDispatcher.completeTask({ 
                 completionState: TaskStatus.Completed, 
-                latestUpdate: "Backup completed",
+                message: "Backup completed",
             });
         }
         catch(e)
@@ -285,8 +285,8 @@ export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: numb
             console.error(e);
 
             await taskUpdateDispatcher.completeTask({
-                completionState: TaskStatus.Cancelled,
-                latestUpdate: "Something went wrong during backup, please check the server logs for more information"
+                completionState: TaskStatus.Failed,
+                message: "Something went wrong during backup, please check the server logs for more information"
             });
         }
     }

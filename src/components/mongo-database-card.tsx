@@ -1,6 +1,5 @@
 import { getMongoDatabaseConnectionStatus, startManualBackup } from "@actions/mongo";
-import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongodb-instance.schema";
-import { Task } from "@backend/db/task.schema";
+import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongodb-database.schema";
 import { Badge } from "@comp/badge";
 import { ButtonWithSpinner } from "@comp/button";
 import { LoadingSpinner } from "@comp/loading-spinner";
@@ -53,7 +52,10 @@ export function MongoDatabaseCard({
           )}
           {dbStatusQuery.data && dbStatusQuery.data.connectionStatus != MongoDatabaseConnection.Online && (
             <Badge variant={"secondary"}>
-              {dbStatusQuery.isFetching ? <LoadingSpinner className="w-4 h-4 mr-2 -ml-1 text-red-500" /> : <SignalSlashIcon className="w-4 h-4 mr-2 -ml-1 text-red-500" /> }
+              <SignalSlashIcon className={cn([
+                "w-4 h-4 mr-2 -ml-1 text-red-500",
+                (dbStatusQuery.isFetching && "animate-pulse")
+              ])} />
               {dbStatusQuery.data?.connectionStatus}
             </Badge>
           )}
