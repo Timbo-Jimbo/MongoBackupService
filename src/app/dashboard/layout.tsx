@@ -1,6 +1,6 @@
 "use server"
 
-import ClientSideQueryClientProvider from "@/components/client-side-query-client-provider";
+import ClientSideQueryClientProvider from "@/components/providers/client-side-query-client-provider";
 import { validAuthOrRedirect } from "@actions/utils";
 import { TooltipProvider } from "@comp/tooltip";
 

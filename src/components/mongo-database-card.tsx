@@ -1,5 +1,4 @@
 import { deleteMongoDatabase, getMongoDatabaseConnectionStatus, startManualBackup } from "@actions/mongo";
-import { useMongoDatabaseListQueryClient } from "@app/dashboard/page";
 import { DatabaseBackupSummary } from "@backend/db/backup.schema";
 import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongodb-database.schema";
 import { Badge } from "@comp/badge";
@@ -11,6 +10,7 @@ import { SignalIcon, SignalSlashIcon, TrashIcon } from "@heroicons/react/20/soli
 import { cn } from "@lib/utils";
 import { DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMongoDatabaseListQueryClient } from "./providers/mongo-database-list-query-client";
 
 
 export function MongoDatabaseCard({
