@@ -1,1 +1,0 @@
-ALTER TABLE `tasks` RENAME COLUMN `` TO `latest-update`;

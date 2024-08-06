@@ -31,7 +31,7 @@ export function MongoDatabaseCard({
   });
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col my-4 gap-4">
       <div className="flex flex-row gap-2 place-items-center">
         <div className="flex flex-row gap-2 place-items-center">              
           <h1 className="text-lg font-semibold capitalize">{mongoDatabase.referenceName}</h1>
@@ -61,12 +61,13 @@ export function MongoDatabaseCard({
           )}
         </div>
       </div>
-      <p className="text-sm opacity-50">{mongoDatabase.censoredConnectionUri}</p>
-      
-      <div className="flex flex-row flex-grow justify-end place-items-center">
-          <ButtonWithSpinner className="w-min" onClick={() => startBackupMutation.mutate()} isLoading={startBackupMutation.isPending}>
-            {startBackupMutation.isPending ? "Starting..." : "Backup now"}
-          </ButtonWithSpinner>
+      <div className="flex flex-row gap-2 place-items-center">
+        <p className="text-sm opacity-50">{mongoDatabase.censoredConnectionUri}</p>
+        <div className="flex flex-row flex-grow justify-end place-items-center">
+            <ButtonWithSpinner className="w-min" onClick={() => startBackupMutation.mutate()} isLoading={startBackupMutation.isPending}>
+              {startBackupMutation.isPending ? "Starting..." : "Backup now"}
+            </ButtonWithSpinner>
+        </div>
       </div>
     </div>
   );

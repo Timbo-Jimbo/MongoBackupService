@@ -1,9 +1,68 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0a64487b-b0f9-46bc-9b25-f15cf74576f3",
+  "id": "2f74e9f5-c4d1-4600-8e59-e95b3d8d5697",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "mongo_databases": {
+      "name": "mongo_databases",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reference_name": {
+          "name": "reference_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reference_color_hex": {
+          "name": "reference_color_hex",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'#000000'"
+        },
+        "connection_uri": {
+          "name": "connection_uri",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "database_name": {
+          "name": "database_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "tasks": {
       "name": "tasks",
       "columns": {
@@ -14,6 +73,13 @@
           "notNull": true,
           "autoincrement": true
         },
+        "mongo_database_id": {
+          "name": "mongo_database_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "type": {
           "name": "type",
           "type": "text",
@@ -21,23 +87,55 @@
           "notNull": true,
           "autoincrement": false
         },
-        "status": {
-          "name": "status",
+        "is_complete": {
+          "name": "is_complete",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "completion_type": {
+          "name": "completion_type",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'pending'"
+          "default": "'not-complete'"
         },
-        "description": {
-          "name": "description",
+        "can_be_cancelled": {
+          "name": "can_be_cancelled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "cancel_requested": {
+          "name": "cancel_requested",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "progress": {
+          "name": "progress",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "'{\"hasProgressValues\":false,\"message\":\"Initialising\"}'"
         },
         "started_at": {
           "name": "started_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -48,13 +146,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
           "autoincrement": false
         }
       },

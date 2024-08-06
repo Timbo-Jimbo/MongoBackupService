@@ -2,11 +2,9 @@
 
 import { TaskCard } from "@/components/task-card";
 import { getAllTasks } from "@actions/tasks";
-import { TaskStatus, Task, TaskType } from "@backend/db/task.schema";
-import { ButtonWithSpinner } from "@comp/button";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { Separator } from "@radix-ui/react-separator";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function TaskList() {
 
@@ -19,7 +17,7 @@ export function TaskList() {
       return await getAllTasks();
     },
     refetchInterval: (query) =>{
-      return !query.state.data || query.state.data.some(t => t.status === TaskStatus.Running) ? 500 : false;
+      return !query.state.data || query.state.data.some(t => !t.isComplete) ? 500 : false;
     }
   });
 

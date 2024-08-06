@@ -1,1 +1,0 @@
-ALTER TABLE `tasks` ADD `progress` integer DEFAULT 0 NOT NULL;

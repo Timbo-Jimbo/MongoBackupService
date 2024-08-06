@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1722675002190,
-      "tag": "0000_acoustic_abomination",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1722686075671,
-      "tag": "0001_minor_thanos",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1722686109687,
-      "tag": "0002_unique_warlock",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1722696905843,
-      "tag": "0003_lame_nova",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1722780893781,
-      "tag": "0004_same_lord_tyger",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1722782639426,
-      "tag": "0005_fearless_kylun",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1722860029155,
-      "tag": "0006_purple_vindicator",
+      "when": 1722906175715,
+      "tag": "0000_aberrant_scream",
       "breakpoints": true
     }
   ]

@@ -1,7 +1,8 @@
 "use server"
 
 import ClientSideQueryClientProvider from "@/components/client-side-query-client-provider";
-import { validAuthOrRedirect } from "@actions/common";
+import { validAuthOrRedirect } from "@actions/utils";
+import { TooltipProvider } from "@comp/tooltip";
 
 export default async function DashboardLayout({
   children,
@@ -12,8 +13,10 @@ export default async function DashboardLayout({
   validAuthOrRedirect();
 
   return (
-    <ClientSideQueryClientProvider>
-      {children}
-    </ClientSideQueryClientProvider>
+    <TooltipProvider>
+      <ClientSideQueryClientProvider>
+        {children}
+      </ClientSideQueryClientProvider>
+    </TooltipProvider>
   );
 }

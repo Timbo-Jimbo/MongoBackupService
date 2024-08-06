@@ -109,6 +109,8 @@ export function MongoDatabaseList() {
                   name="mongo-connection-uri"
                   placeholder="mongodb://user:password@host:port"
                   className="col-span-3"
+                  autoComplete="off"
+                  type="string"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">

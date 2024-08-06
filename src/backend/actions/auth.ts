@@ -4,6 +4,7 @@ import { UserAuth } from "@backend/user-auth";
 import env from "@lib/env";
 import { mockDelay } from "@lib/utils";
 import { redirect } from "next/navigation";
+import { headers } from 'next/headers';
 
 type LoginFailResult = {
     success: false;

@@ -1,11 +1,11 @@
-import { relations } from "drizzle-orm";
+import { sqliteStringEnum } from "@backend/utils";
 import { integer, sqliteTable, SQLiteUpdateSetSource, text } from "drizzle-orm/sqlite-core";
-import { mongoDatabases } from "./mongodb-database.schema";
 
-export enum TaskStatus {
-    Running = 'running',
-    Completed = 'completed',
-    Failed = 'failed'
+export enum TaskCompletionType {
+    NotComplete = 'not-complete',
+    Sucessful = 'successful',
+    Error = 'error',
+    Cancelled = 'cancelled'
 }
 
 export enum TaskType {
@@ -35,8 +35,11 @@ export type TaskProgressMeta = TaskUncertainProgressMeta | TaskDetailedProgressM
 export const tasks = sqliteTable('tasks', {
     id: integer('id').primaryKey({autoIncrement: true}),
     mongoDatabaseId: integer('mongo_database_id'),
-    type: text('type', { enum: [TaskType.ScheduledBackup, TaskType.ManualBackup, TaskType.Restore, TaskType.Seed, TaskType.DeleteBackup] }).notNull(),
-    status: text('status', { enum: [TaskStatus.Running, TaskStatus.Completed, TaskStatus.Failed] }).notNull().default(TaskStatus.Running),
+    type: text('type', { enum: sqliteStringEnum(TaskType) }).notNull(),
+    isComplete: integer('is_complete', {mode: 'boolean'}).notNull().default(false),
+    completionType: text('completion_type', { enum: sqliteStringEnum(TaskCompletionType) }).notNull().default(TaskCompletionType.NotComplete),
+    canBeCancelled: integer('can_be_cancelled', {mode: 'boolean'}).notNull().default(false),
+    cancelRequested: integer('cancel_requested', {mode: 'boolean'}).notNull().default(false),
     progress: text('progress', {mode: 'json'}).$type<TaskProgressMeta>().default({hasProgressValues: false, message: "Initialising"}),
     startedAt: integer('started_at', {mode: 'timestamp'}).notNull().$default(() => new Date()),
     updatedAt: integer('updated_at', {mode: 'timestamp'}).notNull().$default(() => new Date()).$onUpdate(() => new Date()),
@@ -46,10 +49,3 @@ export const tasks = sqliteTable('tasks', {
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = typeof tasks.$inferInsert;
 export type UpdateTask = SQLiteUpdateSetSource<typeof tasks>
-
-export const tasksRelations = relations(tasks, ({ one }) => ({
-    mongoDatabase: one(mongoDatabases, {
-        fields: [tasks.mongoDatabaseId],
-        references: [mongoDatabases.id]
-    }),
-}));

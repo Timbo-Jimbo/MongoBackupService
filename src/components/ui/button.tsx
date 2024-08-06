@@ -59,7 +59,7 @@ export { Button, buttonVariants }
 
 const ButtonWithSpinner = React.forwardRef<HTMLButtonElement, {isLoading?: boolean, children?: React.ReactNode} & ButtonProps>(
   ({isLoading, children, ...props}, ref) => (
-    <Button {...props} disabled={isLoading} ref={ref}>
+    <Button disabled={isLoading} ref={ref} {...props} >
       {children}
       {isLoading && <LoadingSpinner className="ml-4 w-4 h-4"/>}
     </Button>
