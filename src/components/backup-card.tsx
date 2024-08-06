@@ -53,6 +53,10 @@ export function BackupCard({
       });
     }
   });
+
+  const msSinceBackup = Date.now() - backup.createdAt.getTime();
+  const lessThanOneMinSinceBackup = msSinceBackup < 60000;
+  const humanizedDurationString = lessThanOneMinSinceBackup ? "Just now" : (humanizeDuration(msSinceBackup, {round: true, units:["y","mo","w","d", "h", "m"], largest: 1}) + " ago");
   
   return (
     <div className="flex flex-col my-4 gap-4">
@@ -60,7 +64,7 @@ export function BackupCard({
         <div className="flex flex-col gap-2 w-full">
           <div className="flex flex-row gap-2 place-items-center w-full">
             <div className="flex flex-row gap-2 place-items-center w-full">
-              <h1 className="text-lg font-semibold capitalize">{humanizeDuration(Date.now() - backup.createdAt.getTime(), {round: true, units:["y","mo","w","d", "h", "m"], largest: 1})} ago</h1>
+              <h1 className="text-lg font-semibold capitalize">{humanizedDurationString}</h1>
               <p className="grow text-sm opacity-50 text-right">{backup.createdAt.toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})}</p>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

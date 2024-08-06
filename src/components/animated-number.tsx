@@ -5,8 +5,8 @@ const lerp = (start: number, end: number, t: number) => {
 };
 
 const AnimatedNumber = ({ endValue, lerpFactor = 0.1 }:{ endValue: number, duration?: number, lerpFactor?: number }) => {
-    const [displayValue, setDisplayValue] = useState(0);
-    const currentValueRef = useRef(0);
+    const [displayValue, setDisplayValue] = useState(endValue);
+    const currentValueRef = useRef(endValue);
 
     useEffect(() => {
         let animationId: number;
