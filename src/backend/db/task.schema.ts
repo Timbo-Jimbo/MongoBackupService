@@ -1,12 +1,20 @@
 import { sqliteStringEnum } from "@backend/utils";
+import { relations } from "drizzle-orm";
 import { integer, sqliteTable, SQLiteUpdateSetSource, text } from "drizzle-orm/sqlite-core";
+import { mongoDatabases } from "./mongodb-database.schema";
 
-export enum TaskCompletionType {
-    NotComplete = 'not-complete',
+export enum ResolvedTaskState {
     Sucessful = 'successful',
     Error = 'error',
     Cancelled = 'cancelled'
 }
+
+export enum PendingTaskState {
+    Running = 'running',
+}
+
+export type TaskState = ResolvedTaskState | PendingTaskState;
+export const TaskState = {...ResolvedTaskState, ...PendingTaskState};
 
 export enum TaskType {
     ScheduledBackup = 'scheduled_backup',
@@ -16,13 +24,13 @@ export enum TaskType {
     DeleteBackup = 'delete_backup'
 }
 
-export interface TaskUncertainProgressMeta 
+export interface TaskUncertainProgress 
 {
     message: string;
     hasProgressValues: false;
 }
 
-export interface TaskDetailedProgressMeta {
+export interface TaskDetailedProgress {
     message: string;
     hasProgressValues: true;
     current: number;
@@ -30,21 +38,29 @@ export interface TaskDetailedProgressMeta {
     countedThingName: string;
 }
 
-export type TaskProgressMeta = TaskUncertainProgressMeta | TaskDetailedProgressMeta;
+export type TaskProgress = TaskUncertainProgress | TaskDetailedProgress;
 
 export const tasks = sqliteTable('tasks', {
     id: integer('id').primaryKey({autoIncrement: true}),
-    mongoDatabaseId: integer('mongo_database_id'),
+    mongoDatabaseId: integer('mongo_database_id').notNull(),
     type: text('type', { enum: sqliteStringEnum(TaskType) }).notNull(),
     isComplete: integer('is_complete', {mode: 'boolean'}).notNull().default(false),
-    completionType: text('completion_type', { enum: sqliteStringEnum(TaskCompletionType) }).notNull().default(TaskCompletionType.NotComplete),
+    state: text('state', { enum: sqliteStringEnum(TaskState) }).notNull().default(TaskState.Running),
     canBeCancelled: integer('can_be_cancelled', {mode: 'boolean'}).notNull().default(false),
     cancelRequested: integer('cancel_requested', {mode: 'boolean'}).notNull().default(false),
-    progress: text('progress', {mode: 'json'}).$type<TaskProgressMeta>().default({hasProgressValues: false, message: "Initialising"}),
+    progress: text('progress', {mode: 'json'}).$type<TaskProgress>(),
     startedAt: integer('started_at', {mode: 'timestamp'}).notNull().$default(() => new Date()),
     updatedAt: integer('updated_at', {mode: 'timestamp'}).notNull().$default(() => new Date()).$onUpdate(() => new Date()),
-    completedAt: integer('completed_at', {mode: 'timestamp'}),
+    completedAt: integer('completed_at', {mode: 'timestamp'})
 });
+
+
+export const tasksRelations = relations(tasks, ({ one }) => ({
+    mongoDatabase: one(mongoDatabases, {
+        fields: [tasks.mongoDatabaseId],
+        references: [mongoDatabases.id]
+    }),
+}));
 
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = typeof tasks.$inferInsert;

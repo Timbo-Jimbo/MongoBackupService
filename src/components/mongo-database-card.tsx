@@ -3,6 +3,7 @@ import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mong
 import { Badge } from "@comp/badge";
 import { ButtonWithSpinner } from "@comp/button";
 import { LoadingSpinner } from "@comp/loading-spinner";
+import { useToast } from "@comp/use-toast";
 import { SignalIcon, SignalSlashIcon } from "@heroicons/react/20/solid";
 import { cn } from "@lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ export function MongoDatabaseCard({
 }) {
 
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const dbStatusQuery = useQuery({
     queryKey: ["mongoDatabaseStatus", mongoDatabase.id],
@@ -23,7 +25,21 @@ export function MongoDatabaseCard({
 
   const startBackupMutation = useMutation({
     mutationFn: async () => await startManualBackup(mongoDatabase.id),
-    onSuccess: () => {
+    onSuccess: (startResult) => {
+
+      if(!startResult || !startResult.success) {
+        toast({
+          title: "Failed to start backup",
+          description: startResult?.message,
+          variant: "destructive"
+        })
+      }
+      else {
+        toast({
+          title: "Backup started",
+        })
+      }
+
       queryClient.invalidateQueries({
         queryKey: ["tasks"]
       });

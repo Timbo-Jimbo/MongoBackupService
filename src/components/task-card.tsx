@@ -1,5 +1,5 @@
 import { deleteTask, updateTask } from "@actions/tasks";
-import { Task, TaskCompletionType } from "@backend/db/task.schema";
+import { Task, TaskState } from "@backend/db/task.schema";
 import { Badge } from "@comp/badge";
 import { ButtonWithSpinner } from "@comp/button";
 import { LoadingSpinner } from "@comp/loading-spinner";
@@ -58,7 +58,7 @@ export function TaskCard({
               )}
               {task.isComplete && (
                 <Badge variant={"secondary"} className="capitalize">
-                  {task.completionType}
+                  {task.state.toString().replace("_", " ")}
                 </Badge>
               )}
               <p className="grow text-sm opacity-50 text-right">{task.startedAt.toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})}</p>
@@ -114,9 +114,10 @@ export function TaskCard({
       )}
       {!task.isComplete && !task.progress?.hasProgressValues && (
         <div className="flex flex-row flex-grow">
-          <ProgressUncertain className="w-full opacity-50" value={100}/>
+          <ProgressUncertain className="w-full"/>
         </div>
       )}
+      
     </div>
   );
 }

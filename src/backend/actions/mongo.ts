@@ -3,14 +3,15 @@
 import { database } from "@backend/db";
 import { InsertMongoDatabase, MongoDatabase, MongoDatabaseCensored, mongoDatabases, MongoDatabaseConnection } from "@backend/db/mongodb-database.schema";
 import { MongoClient } from "mongodb"
-import { eq } from "drizzle-orm";
-import { TaskType } from "@backend/db/task.schema";
-import { runMongoBackupTask as startMongoBackupTask } from "@backend/tasks/mongo-backup";
-import { TaskUpdateDispatcher } from "@backend/tasks/task-update-dispatcher";
+import { desc, eq } from "drizzle-orm";
+import { Task, tasks, TaskType } from "@backend/db/task.schema";
+import { TaskRunner } from "@backend/tasks/task-runner";
 import { censorMongoDbConnectionUri } from "@backend/utils";
 import { withAuthOrRedirect } from "./utils";
+import { MongoBackupTaskExecutor } from "@backend/tasks/mongo-backup";
 
 function censorMongoDatabase(mongoDatabase: MongoDatabase): MongoDatabaseCensored {
+    
     const result = {
         ...mongoDatabase,
         connectionUri: undefined,
@@ -20,6 +21,18 @@ function censorMongoDatabase(mongoDatabase: MongoDatabase): MongoDatabaseCensore
     delete result.connectionUri;
 
     return result;
+}
+
+export const tryGetLatestTask =  async (mongoDatabaseId: number) : Promise<Task | undefined> => {
+    return await database.query.tasks.findFirst({
+        where: eq(tasks.mongoDatabaseId, mongoDatabaseId),
+        orderBy: [desc(tasks.id)]
+    });
+}
+
+export const isMongoDatabaseBusyWithTask = async (mongoDatabaseId: number) => {
+    const latestTask = await tryGetLatestTask(mongoDatabaseId);
+    return latestTask && !latestTask.isComplete;
 }
 
 export const getMongoDatabaseConnectionStatus = withAuthOrRedirect(async (mongoDatabaseId: number) => {
@@ -67,28 +80,11 @@ export const getMongoDatabaseConnectionStatus = withAuthOrRedirect(async (mongoD
 });
 
 export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: number) => {
-    
-    const mongoDatabase = await database.query.mongoDatabases.findFirst({ 
-        where: eq(mongoDatabases.id, mongoDatabaseId),
-        columns: {
-            databaseName: true,
-            connectionUri: true
-        },
-    });
-
-    if(!mongoDatabase) 
-        throw new Error(`Mongo Database with id ${mongoDatabaseId} not found`);
-
-    console.log("🔄 User initiated backup for database", mongoDatabase.databaseName);
-
-    const { taskId, dispatcher: taskUpdateDispatcher } = await TaskUpdateDispatcher.createNewTask({
+    return TaskRunner.startTask({
         mongoDatabaseId: mongoDatabaseId,
-        type: TaskType.ManualBackup,
-    });
-
-    startMongoBackupTask(mongoDatabase, taskUpdateDispatcher);
-
-    return taskId;
+        taskType: TaskType.ManualBackup,
+        executorType: MongoBackupTaskExecutor
+    })
 });
 
 export const getAllMongoDatabases = withAuthOrRedirect(async (): Promise<MongoDatabaseCensored[]> => {

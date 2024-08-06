@@ -1,21 +1,20 @@
-import { TaskCompletionType } from "@backend/db/task.schema";
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, unlinkSync, statSync } from "node:fs";
 import { MongoClient } from "mongodb";
 import { v7 as uuidv7 } from "uuid";
-import { TaskUpdateDispatcher, TaskCancelledError } from "./task-update-dispatcher";
+import { TaskCommands, TaskExecutor, TaskExecuteResult, TaskCancelledError } from "./task-runner";
+import { MongoDatabaseAccess } from "@backend/db/mongodb-database.schema";
+import { runAndForget } from "@lib/utils";
+import { ResolvedTaskState } from "@backend/db/task.schema";
+import { database } from "@backend/db";
+import { backups } from "@backend/db/backup.schema";
 
-interface MongoDatabaseDetails {
-    connectionUri: string;
-    databaseName: string;
-}
+async function getCollectionWork(databaseAccess: MongoDatabaseAccess) {
 
-async function getCollectionWork(databaseDetails: MongoDatabaseDetails) {
-
-    const client = await MongoClient.connect(databaseDetails.connectionUri);
+    const client = await MongoClient.connect(databaseAccess.connectionUri);
     try
     {
-        const collectionsResult = await client.db(databaseDetails.databaseName).collections();
+        const collectionsResult = await client.db(databaseAccess.databaseName).collections();
         const output = [];
         for(const collection of collectionsResult)
         {
@@ -34,220 +33,221 @@ async function getCollectionWork(databaseDetails: MongoDatabaseDetails) {
     }    
 }
 
-export const runMongoBackupTask = async (databaseDetails: MongoDatabaseDetails, taskUpdateDispatcher: TaskUpdateDispatcher) => {
+export class MongoBackupTaskExecutor implements TaskExecutor {
 
-    const backupFolder = "data/tasks";
-    mkdirSync(backupFolder, { recursive: true });
-    const now = new Date();
-    const backupArchiveName = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${databaseDetails.databaseName}-${uuidv7()}-backup.gz`;
-    const backupArchivePath = `${backupFolder}/${backupArchiveName}`;  
+    async execute(mongoDatabaseAccess: MongoDatabaseAccess, taskCommands: TaskCommands): Promise<TaskExecuteResult> {
+        const backupFolder = "data/backups";
+        mkdirSync(backupFolder, { recursive: true });
+        const now = new Date();
+        const backupArchiveName = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${mongoDatabaseAccess.databaseName}-${uuidv7()}-backup.gz`;
+        const backupArchivePath = `${backupFolder}/${backupArchiveName}`;  
 
-    try
-    {
-        await taskUpdateDispatcher.setCanBeCancelled(true);
+        try
+        {
+            await taskCommands.setCanBeCancelled(true);
 
-        
-        taskUpdateDispatcher.queueProgressUpdate({ hasProgressValues: false,  message: "Gathering info" });
-        const collectionWork = await getCollectionWork(databaseDetails);
-        await taskUpdateDispatcher.throwIfCancelled();
+            
+            taskCommands.reportProgress({ hasProgressValues: false,  message: "Gathering info" });
+            const collectionWork = await getCollectionWork(mongoDatabaseAccess);
+            await taskCommands.throwIfCancelled();
 
-        taskUpdateDispatcher.queueProgressUpdate({ hasProgressValues: false,  message: "Initiating backup..." });
+            taskCommands.reportProgress({ hasProgressValues: false,  message: "Initiating backup..." });
 
-        const childProcess = spawn("mongodump", [
-            databaseDetails.connectionUri,
-            "--authenticationDatabase=admin",
-            "--db=" + databaseDetails.databaseName,
-            "--gzip",
-            `--archive=${backupArchivePath}`,
-            "--verbose"
-        ], { stdio: 'pipe' });
+            const childProcess = spawn("mongodump", [
+                mongoDatabaseAccess.connectionUri,
+                "--authenticationDatabase=admin",
+                "--db=" + mongoDatabaseAccess.databaseName,
+                "--gzip",
+                `--archive=${backupArchivePath}`,
+                "--verbose"
+            ], { stdio: 'pipe' });
 
-        await new Promise<void>((resolve, reject) => {
+            await new Promise<void>((resolve, reject) => {
 
-            let userCancelled = false;
-            async function monitorForCancellation() {
-                while(childProcess.exitCode === null) {
-                    try 
-                    {
-                        await taskUpdateDispatcher.throwIfCancelled();
-                        await new Promise<void>(resolve => setTimeout(resolve, 1000));
-                    }
-                    catch {
-                        console.log("Killing backup process...");
-                        userCancelled = true;
-                        childProcess.kill();
-                        break;
-                    }
-                }
-            }
-            monitorForCancellation();
+                let userCancelled = false;
+                let monitoringForCancellation = true;
 
-            const processStdData = (data: Buffer) => {
-                // hacky, lets pick apart the output to figure out how many
-                // documents have been backed up per collection.
-                const str = data.toString();
-                const lines = str.split("\n");
-                let anyProgressChange = false;
-
-                for(const line of lines)
-                {
-                    if(line.length === 0) continue;
-                    const lineParts = line.split(/\s+/).filter(part => part.length > 0);
-                    if(lineParts.length == 0) continue;
-
-                    try
-                    {
-
-                        const knownDatabaseName = databaseDetails.databaseName;
-
-                        let result: {
-                            backedUpDocCount: number,
-                            totalDocCount: number,
-                            percent: number,
-                            collectionName: string,
-                        } | undefined = undefined;
-
-                        // Example line: 
-                        // "2024-08-05T18:28:42.444+1000    [........................]     db-name.col-name  0/294  (0.0%)"
-                        if(line.includes("[") && line.includes("]"))
+                runAndForget(async () => {
+                    while(monitoringForCancellation) {
+                        try 
                         {
-                            const rawDateTime = lineParts[0];
-                            const rawProgressBar = lineParts[1];
-                            const rawDbAndCollection = lineParts[2];
-                            const rawDocCount = lineParts[3];
-                            const rawDocCountParts = rawDocCount.split("/");
-                            const rawPercent = lineParts[4].slice(1, -2);
-
-                            const backedUpDocCount = parseInt(rawDocCountParts[0]);
-                            const totalDocCount = parseInt(rawDocCountParts[1]);
-                            const percent = parseFloat(rawPercent);
-                            const collectionName = rawDbAndCollection.slice(knownDatabaseName.length + 1);
-
-                            result = {
-                                backedUpDocCount,
-                                totalDocCount,
-                                percent,
-                                collectionName,
-                            };
+                            await taskCommands.throwIfCancelled();
+                            await new Promise<void>(resolve => setTimeout(resolve, 1000));
                         }
-                        // Example line:
-                        // "2024-08-05T18:28:42.313+1000    done dumping db-name.col-name (987 documents)"
-                        else if(line.includes("done dumping"))
+                        catch {
+                            console.log("Killing backup process...");
+                            userCancelled = true;
+                            childProcess.kill();
+                            break;
+                        }
+                    }
+                });
+
+                const processStdData = (data: Buffer) => {
+                    // hacky, lets pick apart the output to figure out how many
+                    // documents have been backed up per collection.
+                    const str = data.toString();
+                    const lines = str.split("\n");
+                    let anyProgressChange = false;
+
+                    for(const line of lines)
+                    {
+                        if(line.length === 0) continue;
+                        const lineParts = line.split(/\s+/).filter(part => part.length > 0);
+                        if(lineParts.length == 0) continue;
+
+                        try
                         {
-                            const rawDateTime = lineParts[0];
-                            const rawDbAndCollection = lineParts[3];
-                            const rawDocCount = lineParts[4].slice(1);
-                            
-                            const collectionName = rawDbAndCollection.slice(knownDatabaseName.length + 1);
-                            const backedUpDocCount = parseInt(rawDocCount);
-                            
-                            result = {
-                                backedUpDocCount,
-                                totalDocCount: backedUpDocCount,
-                                percent: 100,
-                                collectionName,
-                            };
-                        }
-                        
-                        if(result) {
 
-                            anyProgressChange = true;
+                            const knownDatabaseName = mongoDatabaseAccess.databaseName;
 
-                            const collection = collectionWork.find(c => c.name === result.collectionName);
-                            if(collection)
+                            let result: {
+                                backedUpDocCount: number,
+                                totalDocCount: number,
+                                percent: number,
+                                collectionName: string,
+                            } | undefined = undefined;
+
+                            // Example line: 
+                            // "2024-08-05T18:28:42.444+1000    [........................]     db-name.col-name  0/294  (0.0%)"
+                            if(line.includes("[") && line.includes("]"))
                             {
-                                collection.backedUpCount = result.backedUpDocCount;
-                                collection.totalCount = result.totalDocCount;
+                                const rawDateTime = lineParts[0];
+                                const rawProgressBar = lineParts[1];
+                                const rawDbAndCollection = lineParts[2];
+                                const rawDocCount = lineParts[3];
+                                const rawDocCountParts = rawDocCount.split("/");
+                                const rawPercent = lineParts[4].slice(1, -2);
+
+                                const backedUpDocCount = parseInt(rawDocCountParts[0]);
+                                const totalDocCount = parseInt(rawDocCountParts[1]);
+                                const percent = parseFloat(rawPercent);
+                                const collectionName = rawDbAndCollection.slice(knownDatabaseName.length + 1);
+
+                                result = {
+                                    backedUpDocCount,
+                                    totalDocCount,
+                                    percent,
+                                    collectionName,
+                                };
+                            }
+                            // Example line:
+                            // "2024-08-05T18:28:42.313+1000    done dumping db-name.col-name (987 documents)"
+                            else if(line.includes("done dumping"))
+                            {
+                                const rawDateTime = lineParts[0];
+                                const rawDbAndCollection = lineParts[3];
+                                const rawDocCount = lineParts[4].slice(1);
+                                
+                                const collectionName = rawDbAndCollection.slice(knownDatabaseName.length + 1);
+                                const backedUpDocCount = parseInt(rawDocCount);
+                                
+                                result = {
+                                    backedUpDocCount,
+                                    totalDocCount: backedUpDocCount,
+                                    percent: 100,
+                                    collectionName,
+                                };
+                            }
+                            
+                            if(result) {
+
+                                anyProgressChange = true;
+
+                                const collection = collectionWork.find(c => c.name === result.collectionName);
+                                if(collection)
+                                {
+                                    collection.backedUpCount = result.backedUpDocCount;
+                                    collection.totalCount = result.totalDocCount;
+                                }
                             }
                         }
+                        catch (e){
+                            console.error("Failed to parse mongodump output line (ignoring):", lineParts);
+                            console.error(e);
+                        }
                     }
-                    catch (e){
-                        console.error("Failed to parse mongodump output line (ignoring):", lineParts);
-                        console.error(e);
+
+                    if(anyProgressChange) {
+
+                        const totalDocs = collectionWork.reduce((acc, c) => acc + c.totalCount, 0);
+                        const backedUpDocs = collectionWork.reduce((acc, c) => acc + c.backedUpCount, 0);
+                        const allDone = collectionWork.every(c => c.backedUpCount === c.totalCount);
+
+                        taskCommands.reportProgress({
+                            message: `Backing up database.`,
+                            hasProgressValues: true,
+                            current: backedUpDocs,
+                            total: totalDocs,
+                            countedThingName: "Documents"
+                        });
                     }
-                }
+                };
 
-                if(anyProgressChange) {
-
-                    const totalDocs = collectionWork.reduce((acc, c) => acc + c.totalCount, 0);
-                    const backedUpDocs = collectionWork.reduce((acc, c) => acc + c.backedUpCount, 0);
-                    const allDone = collectionWork.every(c => c.backedUpCount === c.totalCount);
-
-                    taskUpdateDispatcher.queueProgressUpdate({
-                        message: `Backing up database.`,
-                        hasProgressValues: true,
-                        current: backedUpDocs,
-                        total: totalDocs,
-                        countedThingName: "Documents"
-                    });
-                }
-            };
-
-            childProcess.stdout && childProcess.stdout.on('data', (data) => {
-                processStdData(data);
+                childProcess.stdout && childProcess.stdout.on('data', (data) => {
+                    processStdData(data);
+                });
+        
+                childProcess.stderr && childProcess.stderr.on('data', (data) => {
+                    processStdData(data);
+                });
+        
+                const cleanupListeners = () => {
+                    childProcess.removeListener('error', onError);
+                    childProcess.removeListener('close', onClose);
+                    monitoringForCancellation = false;
+                };
+        
+                const onError = (err: Error) => {
+                    cleanupListeners();
+                    reject(userCancelled ? new TaskCancelledError() : err);
+                };
+        
+                const onClose =  (code: number | null) => {
+                    cleanupListeners();
+        
+                    if (code !== 0) {
+                        reject(userCancelled ? new TaskCancelledError() : new Error(`mongodump process exited with code ${code}`));
+                    }
+                    else {
+                        resolve();
+                    }
+                };
+        
+                childProcess.on('error', onError);
+                childProcess.on('close', onClose);
             });
-    
-            childProcess.stderr && childProcess.stderr.on('data', (data) => {
-                processStdData(data);
-            });
-    
-            const cleanupListeners = () => {
-                childProcess.removeListener('error', onError);
-                childProcess.removeListener('close', onClose);
-            };
-    
-            const onError = (err: Error) => {
-                cleanupListeners();
-                reject(userCancelled ? new TaskCancelledError() : err);
-            };
-    
-            const onClose =  (code: number | null) => {
-                cleanupListeners();
-    
-                if (code !== 0) {
-                    reject(userCancelled ? new TaskCancelledError() : new Error(`mongodump process exited with code ${code}`));
-                }
-                else {
-                    resolve();
-                }
-            };
-    
-            childProcess.on('error', onError);
-            childProcess.on('close', onClose);
-        });
 
-        console.log("✅ Backup completed");
-    
-        await taskUpdateDispatcher.completeTask({ 
-            completionType: TaskCompletionType.Sucessful, 
-            message: "Backup completed",
-        });
-    }
-    catch(e)
-    {
-        if(e instanceof TaskCancelledError) 
-        {
-            console.log("🛑 Backup cancelled")
-            await taskUpdateDispatcher.completeTask({
-                completionType: TaskCompletionType.Cancelled,
-                message: "Backup was cancelled"
-            });
+            await taskCommands.throwIfCancelled();
+            await taskCommands.setCanBeCancelled(false);
+
+            await taskCommands.reportProgress({ hasProgressValues: false,  message: "Recording backup entry" });
+            
+            await database.insert(backups).values([{
+                mongoDatabaseId: mongoDatabaseAccess.id,
+                archivePath: backupArchivePath,
+                collectionsMetadata: collectionWork.map(cw => ({
+                    collectionName: cw.name,
+                    documentCount: cw.totalCount,
+                })),
+                sizeBytes: statSync(backupArchivePath).size
+            }]).execute();
+        
+            return { 
+                resolvedState: ResolvedTaskState.Sucessful, 
+                message: "Backup completed",
+            };
         }
-        else
+        catch(e)
         {
-            console.error("⚠️ Backup failed");
-            console.error(e);
-    
-            await taskUpdateDispatcher.completeTask({
-                completionType: TaskCompletionType.Error,
-                message: "Something went wrong during backup, please check the server logs for more information"
-            });
-        }
+            if(existsSync(backupArchivePath))
+            {
+                console.log("An error was thrown - deleting incomplete backup archive file...");
+                unlinkSync(backupArchivePath);
+            }
 
-        if(existsSync(backupArchivePath))
-        {
-            console.log("Cleaning up backup archive file on disk...");
-            unlinkSync(backupArchivePath);
+            throw e;
         }
     }
+
 }

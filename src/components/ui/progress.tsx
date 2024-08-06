@@ -38,7 +38,7 @@ const ProgressUncertain = React.forwardRef<
     {...props}
   >
     <ProgressPrimitive.Indicator
-      className="h-full w-full flex-1 bg-primary transition-all animate-pulse"
+      className="h-full w-full flex-1 bg-primary transition-all animate-pulse-on-off"
     />
   </ProgressPrimitive.Root>
 ))

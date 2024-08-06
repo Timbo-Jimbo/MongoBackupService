@@ -12,3 +12,7 @@ export async function mockDelay() {
   if(delayMs > 0)
     await new Promise(r => setTimeout(r, delayMs));
 }
+
+export function runAndForget(action: () => Promise<void>) {
+  action().catch(console.error);
+}
