@@ -226,12 +226,15 @@ export class MongoBackupTaskExecutor implements TaskExecutor {
             await database.insert(backups).values([{
                 mongoDatabaseId: mongoDatabaseAccess.id,
                 archivePath: backupArchivePath,
-                collectionsMetadata: collectionWork.map(cw => ({
-                    collectionName: cw.name,
-                    documentCount: cw.totalCount,
-                })),
-                sizeBytes: statSync(backupArchivePath).size
-            }]).execute();
+                sizeBytes: statSync(backupArchivePath).size,
+                sourceMetadata: {
+                    databaseName: mongoDatabaseAccess.databaseName,
+                    collections: collectionWork.map(cw => ({
+                        collectionName: cw.name,
+                        documentCount: cw.totalCount,
+                    })),
+                },
+            }]);
         
             return { 
                 resolvedState: ResolvedTaskState.Sucessful, 

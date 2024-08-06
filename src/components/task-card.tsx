@@ -1,5 +1,5 @@
 import { deleteTask, updateTask } from "@actions/tasks";
-import { Task, TaskState } from "@backend/db/task.schema";
+import { Task } from "@backend/db/task.schema";
 import { Badge } from "@comp/badge";
 import { ButtonWithSpinner } from "@comp/button";
 import { LoadingSpinner } from "@comp/loading-spinner";
@@ -8,6 +8,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@comp/tooltip";
 import { ClockIcon } from "@heroicons/react/20/solid";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import humanizeDuration from "humanize-duration";
+import { useEffect, useRef } from "react";
+import { AnimatedNumber } from "./animated-number";
 
 export function TaskCard({
   task,
@@ -17,9 +19,30 @@ export function TaskCard({
 
   const queryClient = useQueryClient();
 
+  //hacks! 
+  //this is a little hacky, but im not sure what the best way to do this is yet
+  //when we detect a task transitions to completed, we invalidate backups/mongo-db 
+  //queries so they fetch. This job getting completed (probably) means one or both of those
+  //have changes that need to be fetched..!
+  const taskCompletedRef = useRef(task.isComplete);
+
+  useEffect(() => {
+    if(taskCompletedRef.current !== task.isComplete){
+      taskCompletedRef.current = task.isComplete;
+
+      queryClient.invalidateQueries({ queryKey: ["backups"] });
+      queryClient.invalidateQueries({ queryKey: ["mongo-databases"] });
+    };
+  }, [task.isComplete]);
+
+  //end hacks!
+
   const deleteTaskMutation = useMutation({
     mutationFn: async () => await deleteTask(task.id),
-    onSuccess: () => {
+    onSuccess: (result) => {
+
+      if(!result?.success) return;
+
       queryClient.setQueryData(["tasks"], (tasks: Task[]) => {
         return tasks.filter(t => t.id !== task.id);
       });
@@ -70,7 +93,7 @@ export function TaskCard({
               {task.progress && <p>{task.progress.message}</p>}
               {!task.isComplete && task.progress?.hasProgressValues && (
                 <p className="text-sm">
-                  {task.progress.current.toLocaleString()} 
+                  <AnimatedNumber endValue={task.progress.current} lerpFactor={0.01} />
                   <span className="opacity-50 text-xs"> of {task.progress.total.toLocaleString()} {task.progress.countedThingName}</span>
                 </p>
               )}

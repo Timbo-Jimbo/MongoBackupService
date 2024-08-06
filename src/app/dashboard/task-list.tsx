@@ -13,12 +13,12 @@ export function TaskList() {
   const getTasksQueryKey = ["tasks"];
   const getTasksQuery = useQuery({ 
     queryKey: getTasksQueryKey, 
-    queryFn: async () => {
+    queryFn: async (context) => {
       return await getAllTasks();
     },
     refetchInterval: (query) =>{
       return !query.state.data || query.state.data.some(t => !t.isComplete) ? 500 : false;
-    }
+    },
   });
 
   const isReady = getTasksQuery.isFetched;

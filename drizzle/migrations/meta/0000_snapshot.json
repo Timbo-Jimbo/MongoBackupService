@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "896f88dc-9e49-49d2-af74-ecbd59882e8f",
+  "id": "b3c48eb3-ac71-4684-80e4-5c08c65fd48c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "backups": {
@@ -18,6 +18,13 @@
           "name": "mongo_database_id",
           "type": "integer",
           "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "source_metadata": {
+          "name": "source_metadata",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -31,13 +38,6 @@
         "size_bytes": {
           "name": "size_bytes",
           "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "collections_metadata": {
-          "name": "collections_metadata",
-          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false

@@ -2,18 +2,25 @@ import { relations } from "drizzle-orm";
 import { integer, sqliteTable, SQLiteUpdateSetSource, text } from "drizzle-orm/sqlite-core";
 import { mongoDatabases } from "./mongodb-database.schema";
 
-export interface CollectionMetadata
-{
-    collectionName: string;
-    documentCount: number;
+export type BackupSourceMetadata = {
+    databaseName: string;
+    collections: {
+        collectionName: string;
+        documentCount: number;
+    }[];
+}
+
+export type DatabaseBackupSummary = {
+    count: number;
+    lastBackupAt: Date | null;
 }
 
 export const backups = sqliteTable('backups', {
     id: integer('id').primaryKey({autoIncrement: true}),
-    mongoDatabaseId: integer('mongo_database_id').notNull(),
+    mongoDatabaseId: integer('mongo_database_id'),
+    sourceMetadata: text('source_metadata', {mode: 'json'}).notNull().$type<BackupSourceMetadata>(),
     archivePath: text('archive_path').notNull(),
     sizeBytes: integer('size_bytes').notNull(),
-    collectionsMetadata: text('collections_metadata', {mode: 'json'}).$type<CollectionMetadata[]>().notNull(),
     createdAt: integer('created_at', {mode: 'timestamp'}).notNull().$default(() => new Date()),
 });
 

@@ -134,6 +134,7 @@ export class TaskRunner
 
     return {
       success: true,
+      message: "Task started",
       taskId
     }
   }

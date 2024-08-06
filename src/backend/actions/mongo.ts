@@ -9,6 +9,7 @@ import { TaskRunner } from "@backend/tasks/task-runner";
 import { censorMongoDbConnectionUri } from "@backend/utils";
 import { withAuthOrRedirect } from "./utils";
 import { MongoBackupTaskExecutor } from "@backend/tasks/mongo-backup";
+import { backups } from "@backend/db/backup.schema";
 
 function censorMongoDatabase(mongoDatabase: MongoDatabase): MongoDatabaseCensored {
     
@@ -80,11 +81,16 @@ export const getMongoDatabaseConnectionStatus = withAuthOrRedirect(async (mongoD
 });
 
 export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: number) => {
-    return TaskRunner.startTask({
+    const result = await TaskRunner.startTask({
         mongoDatabaseId: mongoDatabaseId,
         taskType: TaskType.ManualBackup,
         executorType: MongoBackupTaskExecutor
-    })
+    });
+
+    return {
+        ...result,
+        message: (result.success ? "Backup started successfully" : result.message)
+    }
 });
 
 export const getAllMongoDatabases = withAuthOrRedirect(async (): Promise<MongoDatabaseCensored[]> => {
@@ -95,4 +101,33 @@ export const getAllMongoDatabases = withAuthOrRedirect(async (): Promise<MongoDa
 export const addMongoDatabase = withAuthOrRedirect(async (mongoDatabase: InsertMongoDatabase): Promise<MongoDatabaseCensored> => {
     const insertedEntry = await database.insert(mongoDatabases).values([mongoDatabase]).returning();
     return censorMongoDatabase(insertedEntry[0]);
+});
+
+export const deleteMongoDatabase = withAuthOrRedirect(async (id: number) => {
+    
+    const exists = await database.query.mongoDatabases.findFirst({ where: eq(mongoDatabases.id, id) });
+    if(!exists) {
+        return {
+            success: false,
+            message: `Mongo Database with id ${id} not found`
+        }
+    }
+
+    const isBusy = await isMongoDatabaseBusyWithTask(id);
+
+    if(isBusy) {
+        return {
+            success: false,
+            message: `Database is busy with a task, please try again once its current task is complete`
+        }
+    }
+
+    await database.delete(mongoDatabases).where(eq(mongoDatabases.id, id));
+    await database.delete(tasks).where(eq(tasks.mongoDatabaseId, id));
+    await database.update(backups).set({mongoDatabaseId: null}).where(eq(backups.mongoDatabaseId, id));
+
+    return {
+        success: true,
+        message: "Database deleted successfully"
+    }
 });

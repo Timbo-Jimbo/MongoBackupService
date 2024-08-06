@@ -17,5 +17,6 @@ export const updateTask = withAuthOrRedirect(async ({id,  update }: {id: number,
 });
 
 export const deleteTask = withAuthOrRedirect(async (id: number) => {
-    await database.delete(tasks).where(eq(tasks.id, id)).execute();
+    await database.delete(tasks).where(eq(tasks.id, id));
+    return { success: true, message: `Cleared task` };
 });

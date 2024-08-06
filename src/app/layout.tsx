@@ -5,7 +5,7 @@ import LoginExtender from "@/components/login-extender";
 import { AR_One_Sans as Font } from "next/font/google";
 import "./globals.css";
 import { Suspense } from "react";
-import { Toaster } from "@comp/toaster";
+import { Toaster } from "@comp/sonner";
 
 const font = Font({
   subsets: ["latin"],
@@ -33,7 +33,7 @@ export default function RootLayout({
             <Suspense>
               {children}
             </Suspense>
-            <Toaster/>
+            <Toaster position="top-right" />
           </LoginExtender>
       </body>
     </html>

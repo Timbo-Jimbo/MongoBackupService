@@ -1,9 +1,9 @@
 CREATE TABLE `backups` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`mongo_database_id` integer NOT NULL,
+	`mongo_database_id` integer,
+	`source_metadata` text NOT NULL,
 	`archive_path` text NOT NULL,
 	`size_bytes` integer NOT NULL,
-	`collections_metadata` text NOT NULL,
 	`created_at` integer NOT NULL
 );
 --> statement-breakpoint

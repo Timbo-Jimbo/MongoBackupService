@@ -1,48 +1,63 @@
-import { getMongoDatabaseConnectionStatus, startManualBackup } from "@actions/mongo";
+import { deleteMongoDatabase, getMongoDatabaseConnectionStatus, startManualBackup } from "@actions/mongo";
+import { useMongoDatabaseListQueryClient } from "@app/dashboard/page";
+import { DatabaseBackupSummary } from "@backend/db/backup.schema";
 import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongodb-database.schema";
 import { Badge } from "@comp/badge";
-import { ButtonWithSpinner } from "@comp/button";
+import { Button, ButtonWithSpinner } from "@comp/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@comp/dropdown-menu";
 import { LoadingSpinner } from "@comp/loading-spinner";
-import { useToast } from "@comp/use-toast";
-import { SignalIcon, SignalSlashIcon } from "@heroicons/react/20/solid";
+import { toastForActionResult } from "@comp/toasts";
+import { SignalIcon, SignalSlashIcon, TrashIcon } from "@heroicons/react/20/solid";
 import { cn } from "@lib/utils";
+import { DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 
 export function MongoDatabaseCard({
   mongoDatabase,
+  backupSummary,
 }: {
   mongoDatabase: MongoDatabaseCensored,
+  backupSummary: DatabaseBackupSummary
 }) {
 
+  const mongoDatbaseListQueryClient = useMongoDatabaseListQueryClient();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const dbStatusQuery = useQuery({
-    queryKey: ["mongoDatabaseStatus", mongoDatabase.id],
+    queryKey: [mongoDatbaseListQueryClient.queryKey, "status", mongoDatabase.id],
     queryFn: () => getMongoDatabaseConnectionStatus(mongoDatabase.id),
     refetchInterval: (query) => query.state.data?.connectionStatus != MongoDatabaseConnection.Online ? 5000 : 10000,
   })
 
   const startBackupMutation = useMutation({
     mutationFn: async () => await startManualBackup(mongoDatabase.id),
-    onSuccess: (startResult) => {
+    onSuccess: async (result) => {
 
-      if(!startResult || !startResult.success) {
-        toast({
-          title: "Failed to start backup",
-          description: startResult?.message,
-          variant: "destructive"
-        })
-      }
-      else {
-        toast({
-          title: "Backup started",
-        })
-      }
+      toastForActionResult(result);
 
-      queryClient.invalidateQueries({
+      if(!result?.success) return;
+      
+      await queryClient.invalidateQueries({
         queryKey: ["tasks"]
       });
+    }
+  });
+
+  const deleteDatabaseMutation = useMutation({
+    mutationFn: async () => await deleteMongoDatabase(mongoDatabase.id),
+    onSuccess: async (result) => {
+
+      toastForActionResult(result);
+
+      if(!result?.success) return;
+
+      mongoDatbaseListQueryClient.notifyDatabaseWasDeleted(mongoDatabase.id);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+        queryClient.invalidateQueries({ queryKey: ["backups"] })
+      ]);
     }
   });
 
@@ -76,12 +91,29 @@ export function MongoDatabaseCard({
             </Badge>
           )}
         </div>
+        <div className="flex flex-row flex-grow gap-2 justify-end place-items-center">
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant={"ghost"} size="icon">
+                  <DotsVerticalIcon className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem className="bg-destructive text-destructive-foreground" onClick={() => deleteDatabaseMutation.mutate()} disabled={deleteDatabaseMutation.isPending}>
+                    <TrashIcon className="w-4 h-4 mr-2" />
+                    Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+        </div>
       </div>
       <div className="flex flex-row gap-2 place-items-center">
         <p className="text-sm opacity-50">{mongoDatabase.censoredConnectionUri}</p>
-        <div className="flex flex-row flex-grow justify-end place-items-center">
+        <div className="flex flex-row flex-grow gap-2 justify-end place-items-center">
             <ButtonWithSpinner className="w-min" onClick={() => startBackupMutation.mutate()} isLoading={startBackupMutation.isPending}>
-              {startBackupMutation.isPending ? "Starting..." : "Backup now"}
+              {startBackupMutation.isPending ? "Starting..." : "Create Backup"}
             </ButtonWithSpinner>
         </div>
       </div>
