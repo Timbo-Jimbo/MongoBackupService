@@ -57,7 +57,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor {
                 mongoDatabaseAccess.connectionUri,
                 "--authenticationDatabase=admin",
                 "--db=" + mongoDatabaseAccess.databaseName,
-                "--gzip", "--forceTableScan",
+                "--gzip",
                 `--archive=${backupArchivePath}`,
                 "--verbose"
             ], { stdio: 'pipe' });
