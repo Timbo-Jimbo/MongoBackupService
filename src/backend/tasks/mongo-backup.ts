@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, unlinkSync, statSync } from "node:fs";
 import { MongoClient } from "mongodb";
 import { v7 as uuidv7 } from "uuid";
-import { TaskCommands, TaskExecutor, TaskExecuteResult, TaskCancelledError } from "./task-runner";
+import { TaskCommands, TaskExecutor, TaskExecuteResult, TaskCancelledError, NoTaskParams as NoAdditionalParams } from "./task-runner";
 import { MongoDatabaseAccess } from "@backend/db/mongodb-database.schema";
 import { runAndForget } from "@lib/utils";
 import { ResolvedTaskState } from "@backend/db/task.schema";
@@ -33,9 +33,9 @@ async function getCollectionWork(databaseAccess: MongoDatabaseAccess) {
     }    
 }
 
-export class MongoBackupTaskExecutor implements TaskExecutor {
-
-    async execute(mongoDatabaseAccess: MongoDatabaseAccess, taskCommands: TaskCommands): Promise<TaskExecuteResult> {
+export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams> {
+    
+    async execute(commands: TaskCommands, mongoDatabaseAccess: MongoDatabaseAccess): Promise<TaskExecuteResult> {
         const backupFolder = "data/backups";
         mkdirSync(backupFolder, { recursive: true });
         const now = new Date();
@@ -44,14 +44,14 @@ export class MongoBackupTaskExecutor implements TaskExecutor {
 
         try
         {
-            await taskCommands.setCanBeCancelled(true);
+            await commands.setCanBeCancelled(true);
 
             
-            taskCommands.reportProgress({ hasProgressValues: false,  message: "Gathering info" });
+            commands.reportProgress({ hasProgressValues: false,  message: "Gathering info" });
             const collectionWork = await getCollectionWork(mongoDatabaseAccess);
-            await taskCommands.throwIfCancelled();
+            await commands.throwIfCancelled();
 
-            taskCommands.reportProgress({ hasProgressValues: false,  message: "Initiating backup..." });
+            commands.reportProgress({ hasProgressValues: false,  message: "Initiating backup..." });
 
             const childProcess = spawn("mongodump", [
                 mongoDatabaseAccess.connectionUri,
@@ -59,7 +59,6 @@ export class MongoBackupTaskExecutor implements TaskExecutor {
                 "--db=" + mongoDatabaseAccess.databaseName,
                 "--gzip",
                 `--archive=${backupArchivePath}`,
-                "--verbose"
             ], { stdio: 'pipe' });
 
             await new Promise<void>((resolve, reject) => {
@@ -71,7 +70,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor {
                     while(monitoringForCancellation) {
                         try 
                         {
-                            await taskCommands.throwIfCancelled();
+                            await commands.throwIfCancelled();
                             await new Promise<void>(resolve => setTimeout(resolve, 1000));
                         }
                         catch {
@@ -174,7 +173,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor {
                         const backedUpDocs = collectionWork.reduce((acc, c) => acc + c.backedUpCount, 0);
                         const allDone = collectionWork.every(c => c.backedUpCount === c.totalCount);
 
-                        taskCommands.reportProgress({
+                        commands.reportProgress({
                             message: `Backing up database.`,
                             hasProgressValues: true,
                             current: backedUpDocs,
@@ -218,10 +217,10 @@ export class MongoBackupTaskExecutor implements TaskExecutor {
                 childProcess.on('close', onClose);
             });
 
-            await taskCommands.throwIfCancelled();
-            await taskCommands.setCanBeCancelled(false);
+            await commands.throwIfCancelled();
+            await commands.setCanBeCancelled(false);
 
-            await taskCommands.reportProgress({ hasProgressValues: false,  message: "Recording backup entry" });
+            await commands.reportProgress({ hasProgressValues: false,  message: "Recording backup entry" });
             
             await database.insert(backups).values([{
                 mongoDatabaseId: mongoDatabaseAccess.id,

@@ -3,17 +3,8 @@
 import { database } from "@backend/db";
 import { desc, eq } from "drizzle-orm";
 import { withAuthOrRedirect } from "./utils";
-import { backups, DatabaseBackupSummary } from "@backend/db/backup.schema";
+import { backups } from "@backend/db/backup.schema";
 import { unlinkSync } from "node:fs";
-
-export const getBackupStats = withAuthOrRedirect(async (mongoDatabaseId: number): Promise<DatabaseBackupSummary> => {
-    const results = await database.query.backups.findMany({ where: eq(backups.mongoDatabaseId, mongoDatabaseId) });
-
-    return {
-        count: results.length,
-        lastBackupAt: results.length > 0 ? results[0].createdAt : null
-    }
-});
 
 export const getAllBackups = withAuthOrRedirect(async () => {
     return await database.query.backups.findMany({ orderBy: [desc(backups.id)] });

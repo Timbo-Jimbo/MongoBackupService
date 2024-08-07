@@ -10,11 +10,6 @@ export type BackupSourceMetadata = {
     }[];
 }
 
-export type DatabaseBackupSummary = {
-    count: number;
-    lastBackupAt: Date | null;
-}
-
 export const backups = sqliteTable('backups', {
     id: integer('id').primaryKey({autoIncrement: true}),
     mongoDatabaseId: integer('mongo_database_id'),

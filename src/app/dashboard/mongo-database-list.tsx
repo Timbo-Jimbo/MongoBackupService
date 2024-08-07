@@ -7,10 +7,9 @@ import { Input } from "@comp/input";
 import { Label } from "@comp/label";
 import { Separator } from "@comp/separator";
 import { LoadingSpinner } from "@comp/loading-spinner";
-import { FormEvent, useState } from "react";
+import { FormEvent, Fragment, useState } from "react";
 import { toast } from "sonner";
 import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 export function MongoDatabaseList() {
 
@@ -30,14 +29,16 @@ export function MongoDatabaseList() {
         </div>
       )}
       {results.map((result, index, results) => (
-        <div key={result.mongoDatabase.id}>
+        <Fragment key={result.mongoDatabase.id}>
           <MongoDatabaseCard 
             mongoDatabase={result.mongoDatabase}
-            backupSummary={result.backupSummary}
+            backups={result.backups}
+            latestTask={result.latestTask}
           />
-          {index < results.length - 1 && <Separator />}
-        </div>
+          {index < results.length - 1 && <Separator/>}
+        </Fragment>
       ))}
+      
 
       <Dialog open={addFormOpen} onOpenChange={setAddFormOpen}>
         <DialogTrigger asChild>

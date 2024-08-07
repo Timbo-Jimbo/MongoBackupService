@@ -16,8 +16,11 @@ export type TaskExecuteResult = {
   message: string;
 }
 
-export interface TaskExecutor {
-  execute(mongoDatabaseAccess: MongoDatabaseAccess, taskCommands: TaskCommands): Promise<TaskExecuteResult>;
+export type NoTaskParams = undefined | null | void;
+type TaskExecutorConstructor<TParam> = { new(): TaskExecutor<TParam>, paramType?: TParam };
+
+export abstract class TaskExecutor<TExecuteParams = any> {
+  abstract execute(commands: TaskCommands, databaeAccess: MongoDatabaseAccess, additionalParams: TExecuteParams): Promise<TaskExecuteResult>;
 }
 
 export class TaskRunner 
@@ -34,17 +37,20 @@ export class TaskRunner
     return this.taskId;
   } 
 
-  static async startTask<T extends TaskExecutor>({ 
-    mongoDatabaseId, 
-    taskType, 
-    executorType, 
-    initialTaskUpdate 
-  }: { 
+  static async startTask<TParam = any>(
+  {
+    mongoDatabaseId,
+    taskType,
+    executorClass: executorType,
+    executorParams,
+    initialTaskUpdate
+  }: {
     mongoDatabaseId: number,
     taskType: TaskType,
-    executorType: new () => T,
-    initialTaskUpdate?: string 
-  }) {
+    executorClass: TaskExecutorConstructor<TParam>,
+    initialTaskUpdate?: string
+  } & (TParam extends NoTaskParams ? { executorParams?: NoTaskParams } : { executorParams: TParam })
+  ) {
 
     const mongoDatabase = await database.query.mongoDatabases.findFirst({ 
         where: eq(mongoDatabases.id, mongoDatabaseId),
@@ -98,12 +104,13 @@ export class TaskRunner
       {
         const executor = new executorType();
         const result = await executor.execute(
-          mongoDatabase,
           {
             reportProgress: taskRunner.queueProgressUpdate.bind(taskRunner),
             setCanBeCancelled: taskRunner.setCanBeCancelled.bind(taskRunner),
             throwIfCancelled: taskRunner.throwIfCancelled.bind(taskRunner)
-          }
+          },
+          mongoDatabase,
+          executorParams as TParam
         );
 
         console.log(`✅ '${taskType}' task completed`);

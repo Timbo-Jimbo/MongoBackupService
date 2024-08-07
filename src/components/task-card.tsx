@@ -1,16 +1,21 @@
 import { deleteTask, updateTask } from "@actions/tasks";
-import { Task } from "@backend/db/task.schema";
+import { Task, TaskState } from "@backend/db/task.schema";
 import { Badge } from "@comp/badge";
-import { ButtonWithSpinner } from "@comp/button";
+import { Button, ButtonWithSpinner } from "@comp/button";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { Progress, ProgressUncertain } from "@comp/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@comp/tooltip";
-import { ClockIcon } from "@heroicons/react/20/solid";
+import { CheckCircleIcon, ClockIcon, ExclamationCircleIcon, XCircleIcon } from "@heroicons/react/20/solid";
 import { useMutation } from "@tanstack/react-query";
-import humanizeDuration from "humanize-duration";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { AnimatedNumber } from "./animated-number";
 import { useTaskListQueryClient } from "@lib/providers/task-list-query-client";
+import { tryUseMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
+import { tryUseBackupListQueryClient } from "@lib/providers/backup-list-query-client";
+import { DurationDisplay } from "./time-since-display";
+import { Cross2Icon, CrossCircledIcon, DotsVerticalIcon, TrashIcon } from "@radix-ui/react-icons";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@comp/dropdown-menu";
+import { toast } from "sonner";
 
 export function TaskCard({
   task,
@@ -20,6 +25,26 @@ export function TaskCard({
 
   const cancellingTask = useRef(task.cancelRequested);
   const taskListQueryClient = useTaskListQueryClient();
+  const mongoDatabaseListQueryClient = tryUseMongoDatabaseListQueryClient();
+  const backupListQueryClient = tryUseBackupListQueryClient();
+
+  //hack to detect task transitioning into complete state..!
+
+  const taskStateRef = useRef(task.state);
+
+  useEffect(() => {
+    if(taskStateRef.current === task.state) return;
+
+    if(task.state !== TaskState.Running)
+    {
+      mongoDatabaseListQueryClient?.notifyDatabasesPotentiallyDirty();
+      backupListQueryClient?.notifyBackupsPotentiallyDirty();
+    }
+
+    taskStateRef.current = task.state;
+  }, [task.state]);
+
+  //end hack
 
   const deleteTaskMutation = useMutation({
     mutationFn: async () => await deleteTask(task.id),
@@ -27,6 +52,7 @@ export function TaskCard({
 
       if(!result?.success) return;
 
+      console.log("notifyTaskWasDeleted", task.id);
       taskListQueryClient.notifyTaskWasDeleted(task.id);
     }
   });
@@ -57,20 +83,58 @@ export function TaskCard({
           <div className="flex flex-row gap-2 place-items-center w-full">
             <div className="flex flex-row gap-2 place-items-center w-full">
               <h1 className="text-lg font-semibold capitalize">{task.type.toString().replace("_", " ")}</h1>
-              <Badge variant={"secondary"} className="capitalize">
-                <ClockIcon className="w-4 h-4 mr-2 -ml-1" /> {humanizeDuration((task.completedAt?.getTime() ?? Date.now()) - task.startedAt.getTime(), { round: true })}
-              </Badge>
               {!task.isComplete && (
                 <Badge variant={"outline"} className="animate-pulse" >
                   Pending
                 </Badge>
               )}
               {task.isComplete && (
-                <Badge variant={"secondary"} className="capitalize">
+                <Badge variant={task.state == TaskState.Sucessful ? "positive" : "destructive"} className="capitalize">
+                  {task.state === TaskState.Cancelled && <XCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
+                  {task.state === TaskState.Error && <ExclamationCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
+                  {task.state === TaskState.Sucessful && <CheckCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
                   {task.state.toString().replace("_", " ")}
                 </Badge>
               )}
+              <Badge variant={"secondary"}>
+                <ClockIcon className="w-4 h-4 mr-1 -ml-1" />
+                <DurationDisplay startTime={task.startedAt} endTime={() => task.completedAt ?? new Date()} />
+              </Badge>
               <p className="grow text-sm opacity-50 text-right">{task.startedAt.toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})}</p>
+              {!task.isComplete && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant={"ghost"} size="icon">
+                      <DotsVerticalIcon className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <Tooltip delayDuration={0} open={(!task.canBeCancelled) ? undefined : false}>
+                    <DropdownMenuContent>
+                      <TooltipTrigger className="w-full">
+                        <DropdownMenuItem onClick={() => {
+                          const toastId = toast.loading("Cancelling task...");
+                          cancelTaskMutation.mutate(undefined, {
+                            onSettled: () => {
+                              toast.dismiss(toastId);
+                            }
+                          });
+                        }} disabled={cancellingTask.current || !task.canBeCancelled}>
+                          {cancellingTask.current ? <LoadingSpinner className="w-4 h-4 mr-2" /> : <Cross2Icon className="w-4 h-4 mr-2" />}
+                          Cancel
+                        </DropdownMenuItem>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>The task is not safe to cancel at this point.</p>
+                      </TooltipContent>
+                    </DropdownMenuContent>
+                  </Tooltip>
+                </DropdownMenu>
+              )}
+              {task.isComplete && (
+                <Button variant={"ghost"} size="icon" onClick={() => deleteTaskMutation.mutate()} disabled={deleteTaskMutation.isPending}>
+                  {deleteTaskMutation.isPending ? <LoadingSpinner className="w-4 h-4 mr-2" /> : <Cross2Icon className="w-4 h-4 mr-2" />}
+                </Button>
+              )}
             </div>
           </div>
           <div className="flex flex-row gap-2 place-items-center">
@@ -84,35 +148,6 @@ export function TaskCard({
                 </p>
               )}
             </div>
-            
-            {(task.isComplete) && (
-              <div className="flex flex-row flex-grow justify-end place-items-center">
-                  <ButtonWithSpinner variant={"outline"} onClick={() => deleteTaskMutation.mutate()} isLoading={deleteTaskMutation.isPending}>
-                    {deleteTaskMutation.isPending ? "Clearing..." : "Clear"}
-                  </ButtonWithSpinner>
-              </div>
-            )}
-            {!task.isComplete && task.canBeCancelled && (
-              <div className="flex flex-row flex-grow justify-end place-items-center">
-                  <ButtonWithSpinner onClick={() => cancelTaskMutation.mutate()} isLoading={cancellingTask.current}>
-                    {cancellingTask.current ? "Cancelling..." : "Cancel"}
-                  </ButtonWithSpinner>
-              </div>
-            )}
-            {!task.isComplete && !task.canBeCancelled && (
-              <div className="flex flex-row flex-grow justify-end place-items-center">
-                <Tooltip>
-                  <TooltipTrigger>
-                    <ButtonWithSpinner disabled={true}>
-                      Cancel
-                    </ButtonWithSpinner>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>The task is not safe to cancel at this point.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            )}
           </div>
         </div>
       </div>

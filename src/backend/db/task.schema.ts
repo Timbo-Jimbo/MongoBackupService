@@ -21,7 +21,6 @@ export enum TaskType {
     ManualBackup = 'manual_backup',
     Restore = 'restore',
     Seed = 'seed',
-    DeleteBackup = 'delete_backup'
 }
 
 export interface TaskUncertainProgress 

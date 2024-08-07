@@ -1,42 +1,39 @@
-import { useEffect, useRef, useState } from "react";
+import humanizeDuration from "humanize-duration";
+import { useEffect, useState } from "react";
 
-const lerp = (start: number, end: number, t: number) => {
-    return start * (1 - t) + end * t;
-};
+const DurationDisplay = ({ startTime, endTime }:{ startTime: Date | (() => Date), endTime: Date | (() => Date) }) => {
 
-const AnimatedNumber = ({ endValue, lerpFactor = 0.1 }:{ endValue: number, duration?: number, lerpFactor?: number }) => {
-    const [displayValue, setDisplayValue] = useState(endValue);
-    const currentValueRef = useRef(endValue);
+    const getHumanizedString = () => {
+      const resolvedStartTime = typeof startTime === 'function' ? startTime() : startTime;
+      const resolvedEndTime = typeof endTime === 'function' ? endTime() : endTime;
+      return humanizeDuration(resolvedStartTime.getTime() - resolvedEndTime.getTime(), { round: true })
+    }
+
+    const [currentValue, setValue] = useState(getHumanizedString());
 
     useEffect(() => {
         let animationId: number;
     
         const animate = () => {
-          const lerpedValue = lerp(currentValueRef.current, endValue, lerpFactor);
-          const difference = lerpedValue - currentValueRef.current;
-          
-          // Ensure we move at least 1 towards the target, but don't overshoot
-          const newValue = Math.abs(difference) < 1 
-            ? currentValueRef.current + Math.sign(difference)
-            : lerpedValue;
-    
-          currentValueRef.current = Math.min(Math.max(Math.round(newValue), 0), endValue);
-          setDisplayValue(currentValueRef.current);
-    
-          if (currentValueRef.current !== endValue) {
-            animationId = requestAnimationFrame(animate);
+
+          const newValue = getHumanizedString();
+          if(newValue !== currentValue)
+          {
+            setValue(newValue);
           }
+
+          animationId = requestAnimationFrame(animate);
         };
     
         animationId = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(animationId);
-      }, [endValue, lerpFactor]);
+      }, [startTime, endTime]);
 
     return (
         <>
-            {displayValue.toLocaleString()}
+            {currentValue}
         </>
     );
 };
 
-export { AnimatedNumber };
+export { DurationDisplay };

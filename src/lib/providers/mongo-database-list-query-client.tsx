@@ -1,33 +1,36 @@
 "use client"
 
-import { LogoutButton } from "@app/login/components"
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useContext } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getBackupStats } from "@actions/backups";
-import { getAllMongoDatabases, addMongoDatabase } from "@actions/mongo";
-import { DatabaseBackupSummary } from "@backend/db/backup.schema";
+import { getAllBackupsForDatabase } from "@actions/backups";
+import { getAllMongoDatabases, addMongoDatabase, tryGetLatestTask } from "@actions/mongo";
+import { Backup } from "@backend/db/backup.schema";
 import { MongoDatabaseCensored, InsertMongoDatabase } from "@backend/db/mongodb-database.schema";
+import { Task } from "@backend/db/task.schema";
 
 type QueryListEntry = {
     mongoDatabase: MongoDatabaseCensored,
-    backupSummary: DatabaseBackupSummary
+    backups: Backup[],
+    latestTask?: Task
 }
 
 const createMongoDatabaseListQueryClient = () => {
 
     const queryClient = useQueryClient();
-    const queryKey = ["backups", "mongo-databases"];
+    const queryKey = ["backups", "mongo-databases", "tasks"];
 
     const getAllQuery = useQuery({
         queryKey: queryKey,
         queryFn: async () => {
             const mongoDatabases = await getAllMongoDatabases();
             if(!mongoDatabases) return [];
-            const backupStats = await Promise.all(mongoDatabases.map(db => getBackupStats(db.id)));
+            const backupsPerDb = await Promise.all(mongoDatabases.map(db => getAllBackupsForDatabase(db.id)));
+            const latestTasksPerDb = await Promise.all(mongoDatabases.map(db => tryGetLatestTask(db.id)));
             return mongoDatabases.map((db, index) => {
                 return {
                     mongoDatabase: db,
-                    backupSummary: backupStats[index] ?? { count: 0 }
+                    backups: backupsPerDb[index] ?? [],
+                    latestTask: latestTasksPerDb[index]
                 } as QueryListEntry;
             });
         },
@@ -44,7 +47,7 @@ const createMongoDatabaseListQueryClient = () => {
             const newDatabase = await addMongoDatabase(mongoDatabase);
             return {
                 mongoDatabase: newDatabase,
-                backupSummary: { count: 0 }
+                backups: [],
             } as QueryListEntry;
         },
         onSuccess: (newEntry) => {
@@ -56,7 +59,7 @@ const createMongoDatabaseListQueryClient = () => {
         }
     })
 
-    const notifyDAtabasesPotentiallyDirty = () => {
+    const notifyDatabasesPotentiallyDirty = () => {
         queryClient.invalidateQueries({
             queryKey: queryKey,
             exact: false
@@ -68,7 +71,7 @@ const createMongoDatabaseListQueryClient = () => {
         getAllQuery,
         addDatabaseMutation,
         notifyDatabaseWasDeleted,
-        notifyDAtabasesPotentiallyDirty
+        notifyDatabasesPotentiallyDirty
     }
 }
 

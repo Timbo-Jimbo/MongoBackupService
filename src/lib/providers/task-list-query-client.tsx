@@ -2,17 +2,12 @@
 
 import { createContext, useContext } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Task, TaskState, TaskType } from "@backend/db/task.schema";
+import { Task, TaskState } from "@backend/db/task.schema";
 import { getAllTasks, getAllTasksForDatabase } from "@actions/tasks";
-import { tryUseBackupListQueryClient } from "./backup-list-query-client";
-import { tryUseMongoDatabaseListQueryClient } from "./mongo-database-list-query-client";
 
 type QueryListEntry = Task;
 
 const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
-
-    const backupsQueryClient = tryUseBackupListQueryClient();
-    const mongoDatabasesQueryClient = tryUseMongoDatabaseListQueryClient();
 
     const queryClient = useQueryClient();
     const queryKey = ["tasks"];
@@ -34,6 +29,13 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
         });
     };
 
+    const notifyTasksPotentiallyDirty = () => {
+        queryClient.invalidateQueries({
+            queryKey: queryKey,
+            exact: false
+        });
+    }
+
     const notifyTaskWasAdded = (task?: Task | undefined) => {
         if(task){
 
@@ -45,10 +47,7 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
             });
         }
         else {
-            queryClient.invalidateQueries({
-                queryKey: queryKey,
-                exact: false
-            });
+            notifyTasksPotentiallyDirty();
         }
     }
 
@@ -56,11 +55,6 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
         queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
             return entries.map(entry => entry.id === task.id ? task : entry);
         });
-
-        if(task.state === TaskState.Sucessful) {
-            backupsQueryClient?.notifyBackupsPotentiallyDirty();
-            mongoDatabasesQueryClient?.notifyDAtabasesPotentiallyDirty();
-        }
     }
 
     return {
@@ -68,7 +62,8 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
         getAllQuery,
         notifyTaskWasAdded,
         notifyTaskWasDeleted,
-        notifyTaskWasModified
+        notifyTaskWasModified,
+        notifyTasksPotentiallyDirty,
     }
 }
 
@@ -90,8 +85,12 @@ export const TaskListQueryClientProvider = ({
     );
 }
 
+export const tryUseTaskListQueryClient = () => {
+    return useContext(TaskListQueryClient);
+}
+
 export const useTaskListQueryClient = () => {
-    const value = useContext(TaskListQueryClient);
+    const value = tryUseTaskListQueryClient();
     if(!value) throw new Error(`${useTaskListQueryClient.name} must be used within a ${TaskListQueryClientProvider.name}`);
     return value;
 }

@@ -10,6 +10,7 @@ import { censorMongoDbConnectionUri } from "@backend/utils";
 import { withAuthOrRedirect } from "./utils";
 import { MongoBackupTaskExecutor } from "@backend/tasks/mongo-backup";
 import { backups } from "@backend/db/backup.schema";
+import { MongoRestoreExecutor } from "@backend/tasks/mongo-restore";
 
 function censorMongoDatabase(mongoDatabase: MongoDatabase): MongoDatabaseCensored {
     
@@ -54,7 +55,7 @@ export const getMongoDatabaseConnectionStatus = withAuthOrRedirect(async (mongoD
         try
         {
             const pingResult = await client.db().admin().ping();
-            
+
             if(pingResult["ok"] !== 1)
                 return MongoDatabaseConnection.Offline;
             
@@ -84,7 +85,23 @@ export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: numb
     const result = await TaskRunner.startTask({
         mongoDatabaseId: mongoDatabaseId,
         taskType: TaskType.ManualBackup,
-        executorType: MongoBackupTaskExecutor
+        executorClass: MongoBackupTaskExecutor,
+    });
+
+    return {
+        ...result,
+        message: (result.success ? "Backup started successfully" : result.message)
+    }
+});
+
+export const startRestore = withAuthOrRedirect(async (mongoDatabaseId: number, backupId: number) => {
+    const result = await TaskRunner.startTask({
+        mongoDatabaseId: mongoDatabaseId,
+        taskType: TaskType.Restore,
+        executorClass: MongoRestoreExecutor,
+        executorParams: {
+            backupId: backupId
+        }
     });
 
     return {
