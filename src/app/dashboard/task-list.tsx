@@ -6,6 +6,7 @@ import { LoadingSpinner } from "@comp/loading-spinner";
 import { useTaskListQueryClient } from "@lib/providers/task-list-query-client";
 import { Separator } from "@radix-ui/react-separator";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Fragment } from "react";
 
 export function TaskList() {
 
@@ -24,13 +25,12 @@ export function TaskList() {
         </div>
       )}
       {tasks.map((task, index, tasks) => (
-        <div key={task.id}>
+        <Fragment key={task.id}>
           <TaskCard 
-            key={task.id}
             task={task}
           />
           {index < tasks.length - 1 && <Separator />}
-        </div>
+        </Fragment>
       ))}
     </div>
   );

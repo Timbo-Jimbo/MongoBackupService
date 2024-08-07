@@ -11,6 +11,7 @@ import { withAuthOrRedirect } from "./utils";
 import { MongoBackupTaskExecutor } from "@backend/tasks/mongo-backup";
 import { backups } from "@backend/db/backup.schema";
 import { MongoRestoreExecutor } from "@backend/tasks/mongo-restore";
+import { MongoImportExecutor } from "@backend/tasks/mongo-import";
 
 function censorMongoDatabase(mongoDatabase: MongoDatabase): MongoDatabaseCensored {
     
@@ -109,6 +110,24 @@ export const startRestore = withAuthOrRedirect(async (mongoDatabaseId: number, b
         message: (result.success ? "Restore started" : result.message)
     }
 });
+
+export const startImport = withAuthOrRedirect(async (mongoDatabaseId: number, importFromMongoDatabaseId: number) => {
+    const result = await TaskRunner.startTask({
+        mongoDatabaseId: mongoDatabaseId,
+        taskType: TaskType.Import,
+        executorClass: MongoImportExecutor,
+        executorParams: {
+            importFromMongoDatabaseId: importFromMongoDatabaseId
+        }
+    });
+
+
+    return {
+        ...result,
+        message: (result.success ? "Import started" : result.message)
+    }
+});
+
 
 export const getAllMongoDatabases = withAuthOrRedirect(async (): Promise<MongoDatabaseCensored[]> => {
     const result = await database.query.mongoDatabases.findMany();

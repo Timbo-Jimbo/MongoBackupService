@@ -1,4 +1,4 @@
-import { deleteMongoDatabase, getMongoDatabaseConnectionStatus, startManualBackup, startRestore } from "@actions/mongo";
+import { deleteMongoDatabase, getMongoDatabaseConnectionStatus, startImport, startManualBackup, startRestore } from "@actions/mongo";
 import { Backup } from "@backend/db/backup.schema";
 import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongodb-database.schema";
 import { Task, TaskType } from "@backend/db/task.schema";
@@ -8,7 +8,7 @@ import { Button } from "@comp/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuPortal, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@comp/dropdown-menu";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { toast, toastForActionResult } from "@comp/toasts";
-import { ArrowPathIcon, SignalIcon, SignalSlashIcon, Square3Stack3DIcon, TrashIcon } from "@heroicons/react/20/solid";
+import { ArrowDownOnSquareIcon, ArrowPathIcon, SignalIcon, SignalSlashIcon, Square3Stack3DIcon, TrashIcon } from "@heroicons/react/20/solid";
 import { tryUseBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
 import { tryUseTaskListQueryClient } from "@lib/providers/task-list-query-client";
@@ -19,6 +19,7 @@ import { useState } from "react";
 
 type MongoDatabaseCardProps = {
   mongoDatabase: MongoDatabaseCensored,
+  otherDatabases: MongoDatabaseCensored[],
   backups: Backup[],
   latestTask?: Task
 };
@@ -89,6 +90,7 @@ function WorkBadge({
 
 export function MongoDatabaseCard({
   mongoDatabase,
+  otherDatabases,
   backups,
   latestTask
 }: MongoDatabaseCardProps) {
@@ -106,6 +108,18 @@ export function MongoDatabaseCard({
 
   const startBackupMutation = useMutation({
     mutationFn: async () => await startManualBackup(mongoDatabase.id),
+    onSuccess: async (result) => {
+
+      toastForActionResult(result);
+
+      if(!result?.success) return;
+      taskListQueryClient?.notifyTaskWasAdded();
+      mongoDatbaseListQueryClient.notifyDatabasesPotentiallyDirty();
+    }
+  });
+
+  const startImportMutation = useMutation({
+    mutationFn: async (importFromMongoDatabaseId: number) => await startImport(mongoDatabase.id, importFromMongoDatabaseId),
     onSuccess: async (result) => {
 
       toastForActionResult(result);
@@ -158,7 +172,7 @@ export function MongoDatabaseCard({
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => {
-                  const toastId = toast.loading("Initiating task...");
+                  const toastId = toast.loading("Initiating backup...");
                   startBackupMutation.mutate(undefined, {
                     onSettled: () => {
                       toast.dismiss(toastId);
@@ -179,7 +193,7 @@ export function MongoDatabaseCard({
                         <DropdownMenuItem 
                           key={backup.id}
                           onClick={() => {
-                            const toastId = toast.loading("Initiating task...");
+                            const toastId = toast.loading("Initiating restore...");
                             restoreBackupMutation.mutate(backup.id, {
                               onSettled: () => {
                                 toast.dismiss(toastId);
@@ -188,6 +202,38 @@ export function MongoDatabaseCard({
                           }}
                         >
                           From {timeAgoString(backup.createdAt)}
+                        </DropdownMenuItem>    
+                      ))}
+                      {backups.length == 0 && (
+                        <DropdownMenuItem disabled>
+                          No backups available
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <ArrowDownOnSquareIcon className="w-4 h-4 mr-2" />
+                    Import...
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent>
+                      {otherDatabases.map((database) => (
+                        <DropdownMenuItem 
+                          key={database.id}
+                          className="flex-col items-start"
+                          onClick={() => {
+                            const toastId = toast.loading("Initiating import...");
+                            startImportMutation.mutate(database.id, {
+                              onSettled: () => {
+                                toast.dismiss(toastId);
+                              }
+                            });
+                          }}
+                        >
+                          <span className="font-semibold">{database.referenceName}</span>
+                          <span className="opacity-50">{database.databaseName}</span>
                         </DropdownMenuItem>    
                       ))}
                       {backups.length == 0 && (

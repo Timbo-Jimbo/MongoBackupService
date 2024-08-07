@@ -89,7 +89,7 @@ export function TaskCard({
               <h1 className="text-lg font-semibold capitalize">{task.type.toString().replace("_", " ")}</h1>
               {!task.isComplete && (
                 <Badge variant={"outline"} className="animate-pulse" >
-                  Pending
+                  Running
                 </Badge>
               )}
               {task.isComplete && (
