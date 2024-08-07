@@ -20,7 +20,7 @@ export enum TaskType {
     ScheduledBackup = 'scheduled_backup',
     ManualBackup = 'manual_backup',
     Restore = 'restore',
-    Seed = 'seed',
+    Import = 'import',
 }
 
 export interface TaskUncertainProgress 

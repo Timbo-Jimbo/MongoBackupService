@@ -4,7 +4,7 @@ import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 
 import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 
 const AlertDialog = AlertDialogPrimitive.Root
 
@@ -126,6 +126,41 @@ const AlertDialogCancel = React.forwardRef<
 ))
 AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName
 
+const AlertGenericConfirmationDialogContent = ({
+  body,
+  title = "Confirmation",
+  positiveButtonLabel = "Confirm",
+  negativeButtonLabel = "Cancel",
+  onConfirm,
+  onCancel,
+  children
+}: {
+  body: string
+  title?: string | undefined
+  positiveButtonLabel?: string | undefined
+  negativeButtonLabel?: string | undefined
+  onConfirm?: () => void | undefined
+  onCancel?: () => void | undefined
+  children?: React.ReactNode
+}) => {
+  return (
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{title}</AlertDialogTitle>
+      </AlertDialogHeader>
+      <AlertDialogDescription>{body}</AlertDialogDescription>
+      <AlertDialogFooter>
+        <AlertDialogAction onClick={onConfirm}>
+          {positiveButtonLabel}
+        </AlertDialogAction>
+        <AlertDialogCancel onClick={onCancel}>
+          {negativeButtonLabel}
+        </AlertDialogCancel>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  )
+}
+
 export {
   AlertDialog,
   AlertDialogPortal,
@@ -138,4 +173,5 @@ export {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
+  AlertGenericConfirmationDialogContent
 }

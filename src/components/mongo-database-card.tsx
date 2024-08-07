@@ -2,6 +2,7 @@ import { deleteMongoDatabase, getMongoDatabaseConnectionStatus, startManualBacku
 import { Backup } from "@backend/db/backup.schema";
 import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongodb-database.schema";
 import { Task, TaskType } from "@backend/db/task.schema";
+import { AlertDialog, AlertDialogOverlay, AlertDialogPortal, AlertDialogTrigger, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
 import { Badge } from "@comp/badge";
 import { Button } from "@comp/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuPortal, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@comp/dropdown-menu";
@@ -14,6 +15,7 @@ import { tryUseTaskListQueryClient } from "@lib/providers/task-list-query-client
 import { cn, timeAgoString } from "@lib/utils";
 import { DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 type MongoDatabaseCardProps = {
   mongoDatabase: MongoDatabaseCensored,
@@ -56,7 +58,7 @@ function ConnectionBadge({isPending, isFetching, data}: {isPending: boolean, isF
 function taskTypeString(task: Task) {
   switch(task.type){
     case TaskType.Restore: return "Restoring Backup";
-    case TaskType.Seed: return "Seeding from another database";
+    case TaskType.Import: return "Importing from another database";
     case TaskType.ManualBackup: return "Performing Backup (Manual Trigger)";
     case TaskType.ScheduledBackup: return "Performing Backup (Scheduled)";
     default: return "Running Task";
@@ -91,7 +93,7 @@ export function MongoDatabaseCard({
   latestTask
 }: MongoDatabaseCardProps) {
 
-  const queryClient = useQueryClient();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const mongoDatbaseListQueryClient = useMongoDatabaseListQueryClient();
   const taskListQueryClient = tryUseTaskListQueryClient();
   const backupQueryClient = tryUseBackupListQueryClient();
@@ -148,7 +150,6 @@ export function MongoDatabaseCard({
           <WorkBadge task={latestTask}/>
         </div>
         <div className="flex flex-row flex-grow gap-2 justify-end place-items-center">
-            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant={"ghost"} size="icon">
@@ -198,13 +199,18 @@ export function MongoDatabaseCard({
                   </DropdownMenuPortal>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="bg-destructive text-destructive-foreground" onClick={() => deleteDatabaseMutation.mutate()} disabled={deleteDatabaseMutation.isPending}>
+                <DropdownMenuItem className="bg-destructive text-destructive-foreground" disabled={deleteDatabaseMutation.isPending} onClick={() => setDeleteDialogOpen(true)}>
                     <TrashIcon className="w-4 h-4 mr-2" />
                     Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertGenericConfirmationDialogContent 
+                body="Are you sure you want to delete this database?"
+                onConfirm={() => deleteDatabaseMutation.mutate()}
+              />
+            </AlertDialog>
         </div>
       </div>
       <div className="flex flex-row gap-2 place-items-center">

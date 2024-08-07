@@ -7,7 +7,7 @@ import { Progress, ProgressUncertain } from "@comp/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@comp/tooltip";
 import { CheckCircleIcon, ClockIcon, ExclamationCircleIcon, XCircleIcon } from "@heroicons/react/20/solid";
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatedNumber } from "./animated-number";
 import { useTaskListQueryClient } from "@lib/providers/task-list-query-client";
 import { tryUseMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
@@ -16,13 +16,15 @@ import { DurationDisplay } from "./time-since-display";
 import { Cross2Icon, CrossCircledIcon, DotsVerticalIcon, TrashIcon } from "@radix-ui/react-icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@comp/dropdown-menu";
 import { toast } from "sonner";
+import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
 
 export function TaskCard({
   task,
 }: {
   task: Task,
 }) {
-
+  
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const cancellingTask = useRef(task.cancelRequested);
   const taskListQueryClient = useTaskListQueryClient();
   const mongoDatabaseListQueryClient = tryUseMongoDatabaseListQueryClient();
@@ -102,33 +104,41 @@ export function TaskCard({
               </Badge>
               <p className="grow text-sm opacity-50 text-right">{task.startedAt.toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})}</p>
               {!task.isComplete && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant={"ghost"} size="icon">
-                      <DotsVerticalIcon className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <Tooltip delayDuration={0} open={(!task.canBeCancelled) ? undefined : false}>
-                    <DropdownMenuContent>
-                      <TooltipTrigger className="w-full">
-                        <DropdownMenuItem onClick={() => {
-                          const toastId = toast.loading("Cancelling task...");
-                          cancelTaskMutation.mutate(undefined, {
-                            onSettled: () => {
-                              toast.dismiss(toastId);
-                            }
-                          });
-                        }} disabled={cancellingTask.current || !task.canBeCancelled}>
-                          {cancellingTask.current ? <LoadingSpinner className="w-4 h-4 mr-2" /> : <Cross2Icon className="w-4 h-4 mr-2" />}
-                          Cancel
-                        </DropdownMenuItem>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>The task is not safe to cancel at this point.</p>
-                      </TooltipContent>
-                    </DropdownMenuContent>
-                  </Tooltip>
-                </DropdownMenu>
+                <>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant={"ghost"} size="icon">
+                        <DotsVerticalIcon className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <Tooltip delayDuration={0} open={(!task.canBeCancelled) ? undefined : false}>
+                      <DropdownMenuContent>
+                        <TooltipTrigger className="w-full">
+                          <DropdownMenuItem onClick={() => setCancelDialogOpen(true)} disabled={cancellingTask.current || !task.canBeCancelled}>
+                            {cancellingTask.current ? <LoadingSpinner className="w-4 h-4 mr-2" /> : <Cross2Icon className="w-4 h-4 mr-2" />}
+                            Cancel
+                          </DropdownMenuItem>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>The task is not safe to cancel at this point.</p>
+                        </TooltipContent>
+                      </DropdownMenuContent>
+                    </Tooltip>
+                  </DropdownMenu>
+                  <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+                    <AlertGenericConfirmationDialogContent 
+                      body="Are you sure you want to cancel this task?"
+                      onConfirm={() => {
+                        const toastId = toast.loading("Cancelling task...");
+                        cancelTaskMutation.mutate(undefined, {
+                          onSettled: () => {
+                            toast.dismiss(toastId);
+                          }
+                        });
+                      }}
+                    />
+                </AlertDialog>
+              </>
               )}
               {task.isComplete && (
                 <Button variant={"ghost"} size="icon" onClick={() => deleteTaskMutation.mutate()} disabled={deleteTaskMutation.isPending}>

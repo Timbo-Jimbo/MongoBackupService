@@ -1,5 +1,6 @@
 import { deleteBackup } from "@actions/backups";
 import { Backup } from "@backend/db/backup.schema";
+import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
 import { Button } from "@comp/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@comp/dropdown-menu";
 import { toast, toastForActionResult } from "@comp/toasts";
@@ -9,7 +10,7 @@ import { timeAgoString } from "@lib/utils";
 import { DotsVerticalIcon, TrashIcon } from "@radix-ui/react-icons";
 import { useMutation } from "@tanstack/react-query";
 import prettyBytes from "pretty-bytes"
-
+import { useState } from "react";
 
 interface TitleAndStatPassInIconProps {
   Icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
@@ -38,7 +39,7 @@ export function BackupCard({
 }: {
   backup: Backup,
 }) {
-
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const backupListQueryClient = useBackupListQueryClient(); 
 
   const deleteBackupMutation = useMutation({
@@ -68,19 +69,25 @@ export function BackupCard({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem className="bg-destructive text-destructive-foreground" onClick={() => {
+                  <DropdownMenuItem className="bg-destructive text-destructive-foreground" onClick={() => setDeleteDialogOpen(true)} disabled={deleteBackupMutation.isPending}>
+                      <TrashIcon className="w-4 h-4 mr-2" />
+                      Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertGenericConfirmationDialogContent 
+                  body="Are you sure you want to delete this backup?"
+                  onConfirm={() => {
                     const toastId = toast.loading("Deleting backup...");
                     deleteBackupMutation.mutate(undefined, {
                       onSettled: () => {
                         toast.dismiss(toastId);
                       }
                     });
-                  }} disabled={deleteBackupMutation.isPending}>
-                      <TrashIcon className="w-4 h-4 mr-2" />
-                      Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  }}
+                />
+              </AlertDialog>
             </div>
           </div>
           <div className="flex flex-row gap-2 place-items-center my-4">
