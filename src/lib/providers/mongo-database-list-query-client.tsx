@@ -1,3 +1,4 @@
+"use client"
 
 import { LogoutButton } from "@app/login/components"
 import { createContext, useCallback, useContext, useState } from "react";
