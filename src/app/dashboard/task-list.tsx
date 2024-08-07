@@ -3,26 +3,16 @@
 import { TaskCard } from "@/components/task-card";
 import { getAllTasks } from "@actions/tasks";
 import { LoadingSpinner } from "@comp/loading-spinner";
+import { useTaskListQueryClient } from "@lib/providers/task-list-query-client";
 import { Separator } from "@radix-ui/react-separator";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function TaskList() {
 
-  const queryClient = useQueryClient();
+  const taskListQueryClient = useTaskListQueryClient();
 
-  const getTasksQueryKey = ["tasks"];
-  const getTasksQuery = useQuery({ 
-    queryKey: getTasksQueryKey, 
-    queryFn: async (context) => {
-      return await getAllTasks();
-    },
-    refetchInterval: (query) =>{
-      return !query.state.data || query.state.data.some(t => !t.isComplete) ? 500 : false;
-    },
-  });
-
-  const isReady = getTasksQuery.isFetched;
-  const tasks = getTasksQuery.data || [];
+  const isReady = taskListQueryClient.getAllQuery.isFetched;
+  const tasks = taskListQueryClient.getAllQuery.data || [];
 
   return (
     <div className="flex flex-col w-full gap-4">

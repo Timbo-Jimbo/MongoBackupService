@@ -4,6 +4,7 @@ import { Button } from "@comp/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@comp/dropdown-menu";
 import { toastForActionResult } from "@comp/toasts";
 import { ChartPieIcon, DocumentIcon, Square3Stack3DIcon, TableCellsIcon } from "@heroicons/react/20/solid";
+import { useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { DotsVerticalIcon, TrashIcon } from "@radix-ui/react-icons";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import humanizeDuration from "humanize-duration";
@@ -38,7 +39,7 @@ export function BackupCard({
   backup: Backup,
 }) {
 
-  const queryClient = useQueryClient();
+  const backupListQueryClient = useBackupListQueryClient(); 
 
   const deleteBackupMutation = useMutation({
     mutationFn: async () => await deleteBackup(backup.id),
@@ -48,9 +49,7 @@ export function BackupCard({
 
       if(!result?.success) return;
 
-      queryClient.setQueryData(["backups"], (backups: Backup[]) => {
-        return backups.filter(b => b.id !== backup.id);
-      });
+      backupListQueryClient.notifyBackupWasDeleted(backup.id);
     }
   });
 

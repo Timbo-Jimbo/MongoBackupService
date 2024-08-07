@@ -2,24 +2,15 @@
 
 import { Separator } from "@comp/separator";
 import { LoadingSpinner } from "@comp/loading-spinner";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAllBackups } from "@actions/backups";
 import { BackupCard } from "@/components/backup-card";
+import { useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 
 export function BackupList() {
 
-  const queryClient = useQueryClient();
+  const backupListQueryClient = useBackupListQueryClient(); 
 
-  const getAllQueryKey = ["backups"];
-  const getAllQuery = useQuery({ 
-    queryKey: getAllQueryKey, 
-    queryFn: async () => {
-      return await getAllBackups();
-    },
-  });
-
-  const isReady = getAllQuery.isFetched;
-  const backups = getAllQuery.data || [];
+  const isReady = backupListQueryClient.getAllQuery.isFetched;
+  const backups = backupListQueryClient.getAllQuery.data || [];
 
   return (
     <div className="flex flex-col w-full gap-4">

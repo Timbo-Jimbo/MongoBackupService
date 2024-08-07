@@ -11,6 +11,10 @@ export const getAllTasks = withAuthOrRedirect(async (refreshIds?: number[] | und
     return await database.query.tasks.findMany({ orderBy: [desc(tasks.id)] });
 });
 
+export const getAllTasksForDatabase = withAuthOrRedirect(async (mongoDatabaseId: number) => {
+    return await database.query.tasks.findMany({where: eq(tasks.mongoDatabaseId, mongoDatabaseId), orderBy: [desc(tasks.id)] });
+});
+
 export const updateTask = withAuthOrRedirect(async ({id,  update }: {id: number, update: Partial<InsertTask>} ) => {
     const result = await database.update(tasks).set(update).where(eq(tasks.id, id)).returning();
     return result[0];

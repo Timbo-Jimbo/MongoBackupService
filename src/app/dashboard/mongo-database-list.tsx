@@ -9,7 +9,8 @@ import { Separator } from "@comp/separator";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
-import { useMongoDatabaseListQueryClient } from "@/components/providers/mongo-database-list-query-client";
+import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 export function MongoDatabaseList() {
 

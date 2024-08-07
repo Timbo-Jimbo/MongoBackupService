@@ -6,10 +6,11 @@ import { LoadingSpinner } from "@comp/loading-spinner";
 import { Progress, ProgressUncertain } from "@comp/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@comp/tooltip";
 import { ClockIcon } from "@heroicons/react/20/solid";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import humanizeDuration from "humanize-duration";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { AnimatedNumber } from "./animated-number";
+import { useTaskListQueryClient } from "@lib/providers/task-list-query-client";
 
 export function TaskCard({
   task,
@@ -17,25 +18,8 @@ export function TaskCard({
   task: Task,
 }) {
 
-  const queryClient = useQueryClient();
-
-  //hacks! 
-  //this is a little hacky, but im not sure what the best way to do this is yet
-  //when we detect a task transitions to completed, we invalidate backups/mongo-db 
-  //queries so they fetch. This job getting completed (probably) means one or both of those
-  //have changes that need to be fetched..!
-  const taskCompletedRef = useRef(task.isComplete);
-
-  useEffect(() => {
-    if(taskCompletedRef.current !== task.isComplete){
-      taskCompletedRef.current = task.isComplete;
-
-      queryClient.invalidateQueries({ queryKey: ["backups"] });
-      queryClient.invalidateQueries({ queryKey: ["mongo-databases"] });
-    };
-  }, [task.isComplete]);
-
-  //end hacks!
+  const cancellingTask = useRef(task.cancelRequested);
+  const taskListQueryClient = useTaskListQueryClient();
 
   const deleteTaskMutation = useMutation({
     mutationFn: async () => await deleteTask(task.id),
@@ -43,24 +27,26 @@ export function TaskCard({
 
       if(!result?.success) return;
 
-      queryClient.setQueryData(["tasks"], (tasks: Task[]) => {
-        return tasks.filter(t => t.id !== task.id);
-      });
+      taskListQueryClient.notifyTaskWasDeleted(task.id);
     }
   });
   
   const cancelTaskMutation = useMutation({
-    mutationFn: async () => await updateTask({ id: task.id, update: { cancelRequested: true } }),
+    mutationFn: async () => {
+      cancellingTask.current = true;
+      return await updateTask({ id: task.id, update: { cancelRequested: true } });
+    },
     onSuccess: (updatedTask) => {
-
-      if(!updatedTask) return;
-
-      queryClient.setQueryData(["tasks"], (tasks: Task[]) => {
-        return tasks.map(t => {
-          if(t.id === task.id) return updatedTask;
-          return t;
-        });
-      });
+      if(!updatedTask) 
+      {
+        cancellingTask.current = false;
+        return;
+      }
+      
+      taskListQueryClient.notifyTaskWasModified(updatedTask);
+    },
+    onError: () => {
+      cancellingTask.current = false;
     }
   });
 
@@ -108,8 +94,8 @@ export function TaskCard({
             )}
             {!task.isComplete && task.canBeCancelled && (
               <div className="flex flex-row flex-grow justify-end place-items-center">
-                  <ButtonWithSpinner onClick={() => cancelTaskMutation.mutate()} isLoading={cancelTaskMutation.isPending || task.cancelRequested}>
-                    {cancelTaskMutation.isPending || task.cancelRequested ? "Cancelling..." : "Cancel"}
+                  <ButtonWithSpinner onClick={() => cancelTaskMutation.mutate()} isLoading={cancellingTask.current}>
+                    {cancellingTask.current ? "Cancelling..." : "Cancel"}
                   </ButtonWithSpinner>
               </div>
             )}

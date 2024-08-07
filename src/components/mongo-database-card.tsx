@@ -7,22 +7,23 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { toastForActionResult } from "@comp/toasts";
 import { SignalIcon, SignalSlashIcon, TrashIcon } from "@heroicons/react/20/solid";
+import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
 import { cn } from "@lib/utils";
 import { DotsVerticalIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMongoDatabaseListQueryClient } from "./providers/mongo-database-list-query-client";
+import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+type MongoDatabaseCardProps = {
+  mongoDatabase: MongoDatabaseCensored,
+  backupSummary: DatabaseBackupSummary
+};
 
 export function MongoDatabaseCard({
   mongoDatabase,
   backupSummary,
-}: {
-  mongoDatabase: MongoDatabaseCensored,
-  backupSummary: DatabaseBackupSummary
-}) {
+}: MongoDatabaseCardProps) {
 
-  const mongoDatbaseListQueryClient = useMongoDatabaseListQueryClient();
   const queryClient = useQueryClient();
+  const mongoDatbaseListQueryClient = useMongoDatabaseListQueryClient();
 
   const dbStatusQuery = useQuery({
     queryKey: [mongoDatbaseListQueryClient.queryKey, "status", mongoDatabase.id],
