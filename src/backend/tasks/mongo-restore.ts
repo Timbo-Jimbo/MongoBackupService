@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { TaskCommands, TaskExecutor, TaskExecuteResult } from "./task-runner";
+import { TaskCommands, TaskExecutor, TaskExecuteResult, TaskCancelledError } from "./task-runner";
 import { MongoDatabaseAccess } from "@backend/db/mongodb-database.schema";
-import { ResolvedTaskState } from "@backend/db/task.schema";
+import { ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
 import { backups } from "@backend/db/backup.schema";
 import { database } from "@backend/db";
 import { eq } from "drizzle-orm";
+import { runAndForget } from "@lib/utils";
 
 export class MongoRestoreExecutor implements TaskExecutor<{backupId:number}> {
     
@@ -30,7 +31,7 @@ export class MongoRestoreExecutor implements TaskExecutor<{backupId:number}> {
                 };
             }
 
-            await commands.setCanBeCancelled(false);
+            await commands.setCancellationType(TaskCancellationType.DangerousToCancel);
             
             commands.reportProgress({ hasProgressValues: false,  message: "Initiating restore..." });
 
@@ -48,8 +49,52 @@ export class MongoRestoreExecutor implements TaskExecutor<{backupId:number}> {
 
             await new Promise<void>((resolve, reject) => {
 
+                let userCancelled = false;
+                let monitoringForCancellation = true;
+
+                runAndForget(async () => {
+                    while(monitoringForCancellation) {
+                        try 
+                        {
+                            await commands.throwIfCancelled();
+                            await new Promise<void>(resolve => setTimeout(resolve, 1000));
+                        }
+                        catch {
+                            console.log("Killing restore process...");
+                            userCancelled = true;
+                            childProcess.kill();
+                            break;
+                        }
+                    }
+                });
+
                 const processStdData = (data: Buffer) => {
-                   // for now, lets ignore this
+                    // hacky, lets pick apart the output to figure out how many
+                    // documents have been backed up per collection.
+                    const str = data.toString();
+                    const lines = str.split("\n");
+                    let anyProgressChange = false;
+
+                    for(const line of lines)
+                    {
+                        if(line.length === 0) continue;
+                        const lineParts = line.split(/\s+/).filter(part => part.length > 0);
+                        if(lineParts.length == 0) continue;
+
+                        try
+                        {
+                            const knownDatabaseName = mongoDatabaseAccess.databaseName;
+
+                            //todo...
+                        }
+                        catch (e){
+                            console.error("Failed to parse mongorestore output line (ignoring):", lineParts);
+                            console.error(e);
+                        }
+                    }
+
+                    if(anyProgressChange) {
+                    }
                 };
 
                 childProcess.stdout && childProcess.stdout.on('data', (data) => {
@@ -63,18 +108,19 @@ export class MongoRestoreExecutor implements TaskExecutor<{backupId:number}> {
                 const cleanupListeners = () => {
                     childProcess.removeListener('error', onError);
                     childProcess.removeListener('close', onClose);
+                    monitoringForCancellation = false;
                 };
         
                 const onError = (err: Error) => {
                     cleanupListeners();
-                    reject(err);
+                    reject(userCancelled ? new TaskCancelledError() : err);
                 };
         
                 const onClose =  (code: number | null) => {
                     cleanupListeners();
         
                     if (code !== 0) {
-                        reject(new Error(`mongorestore process exited with code ${code}`));
+                        reject(userCancelled ? new TaskCancelledError() : new Error(`mongorestore process exited with code ${code}`));
                     }
                     else {
                         resolve();
@@ -87,7 +133,7 @@ export class MongoRestoreExecutor implements TaskExecutor<{backupId:number}> {
 
             return { 
                 resolvedState: ResolvedTaskState.Sucessful, 
-                message: "Backup restored successfully",
+                message: "Restored successfully",
             };
         }
         catch(e)

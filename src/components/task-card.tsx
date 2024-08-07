@@ -1,11 +1,11 @@
 import { deleteTask, updateTask } from "@actions/tasks";
-import { Task, TaskState } from "@backend/db/task.schema";
+import { Task, TaskCancellationType, TaskState } from "@backend/db/task.schema";
 import { Badge } from "@comp/badge";
 import { Button, ButtonWithSpinner } from "@comp/button";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { Progress, ProgressUncertain } from "@comp/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@comp/tooltip";
-import { CheckCircleIcon, ClockIcon, ExclamationCircleIcon, XCircleIcon } from "@heroicons/react/20/solid";
+import { CheckCircleIcon, ClockIcon, ExclamationCircleIcon, ExclamationTriangleIcon, XCircleIcon } from "@heroicons/react/20/solid";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { AnimatedNumber } from "./animated-number";
@@ -16,7 +16,9 @@ import { DurationDisplay } from "./time-since-display";
 import { Cross2Icon, CrossCircledIcon, DotsVerticalIcon, TrashIcon } from "@radix-ui/react-icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@comp/dropdown-menu";
 import { toast } from "sonner";
-import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
+import { title } from "process";
+import { Alert, AlertDescription, AlertTitle } from "@comp/alert";
 
 export function TaskCard({
   task,
@@ -111,38 +113,60 @@ export function TaskCard({
                         <DotsVerticalIcon className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <Tooltip delayDuration={0} open={(!task.canBeCancelled) ? undefined : false}>
+                    <Tooltip delayDuration={0} open={(task.cancellationType != TaskCancellationType.NotCancellable) ? false : undefined}>
                       <DropdownMenuContent>
                         <TooltipTrigger className="w-full">
-                          <DropdownMenuItem onClick={() => setCancelDialogOpen(true)} disabled={cancellingTask.current || !task.canBeCancelled}>
-                            {cancellingTask.current ? <LoadingSpinner className="w-4 h-4 mr-2" /> : <Cross2Icon className="w-4 h-4 mr-2" />}
+                          <DropdownMenuItem onClick={() => setCancelDialogOpen(true)} disabled={cancellingTask.current || task.cancellationType == TaskCancellationType.NotCancellable}>
+                            {cancellingTask.current && <LoadingSpinner className="w-4 h-4 mr-2" />}
+                            {!cancellingTask.current && (task.cancellationType == TaskCancellationType.DangerousToCancel ? <ExclamationTriangleIcon className="w-4 h-4 mr-2" /> : <Cross2Icon className="w-4 h-4 mr-2" />)}
                             Cancel
                           </DropdownMenuItem>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>The task is not safe to cancel at this point.</p>
+                          <p>The task can not be cancelled at this point.</p>
                         </TooltipContent>
                       </DropdownMenuContent>
                     </Tooltip>
                   </DropdownMenu>
                   <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-                    <AlertGenericConfirmationDialogContent 
-                      body="Are you sure you want to cancel this task?"
-                      onConfirm={() => {
-                        const toastId = toast.loading("Cancelling task...");
-                        cancelTaskMutation.mutate(undefined, {
-                          onSettled: () => {
-                            toast.dismiss(toastId);
-                          }
-                        });
-                      }}
-                    />
-                </AlertDialog>
-              </>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmation</AlertDialogTitle>
+                      </AlertDialogHeader>
+                      <AlertDialogDescription className="flex flex-col gap-3">
+                        Are you sure you want to cancel this task?
+                        {task.cancellationType == TaskCancellationType.DangerousToCancel && (
+                          <Alert variant="destructive">
+                            <ExclamationTriangleIcon className="h-4 w-4" />
+                            <AlertTitle>This task is not safe to cancel</AlertTitle>
+                            <AlertDescription>
+                            Cancelling this task now may lead to loss of data. 
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </AlertDialogDescription>
+                      <AlertDialogFooter>
+                        <AlertDialogAction onClick={() => {
+                          const toastId = toast.loading("Cancelling task...");
+                          cancelTaskMutation.mutate(undefined, {
+                            onSettled: () => {
+                              toast.dismiss(toastId);
+                            }
+                          });
+                        }}>
+                          {task.cancellationType == TaskCancellationType.DangerousToCancel ? "Confirm (I know what I am doing)" : "Confirm"}
+                        </AlertDialogAction>
+                        <AlertDialogCancel>
+                          Cancel
+                        </AlertDialogCancel>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
               )}
               {task.isComplete && (
                 <Button variant={"ghost"} size="icon" onClick={() => deleteTaskMutation.mutate()} disabled={deleteTaskMutation.isPending}>
-                  {deleteTaskMutation.isPending ? <LoadingSpinner className="w-4 h-4 mr-2" /> : <Cross2Icon className="w-4 h-4 mr-2" />}
+                  {deleteTaskMutation.isPending ? <LoadingSpinner className="w-4 h-4" /> : <Cross2Icon className="w-4 h-4" />}
                 </Button>
               )}
             </div>

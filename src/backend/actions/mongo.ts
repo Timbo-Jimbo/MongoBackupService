@@ -90,7 +90,7 @@ export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: numb
 
     return {
         ...result,
-        message: (result.success ? "Backup started successfully" : result.message)
+        message: (result.success ? "Backup started" : result.message)
     }
 });
 
@@ -106,7 +106,7 @@ export const startRestore = withAuthOrRedirect(async (mongoDatabaseId: number, b
 
     return {
         ...result,
-        message: (result.success ? "Backup started successfully" : result.message)
+        message: (result.success ? "Restore started" : result.message)
     }
 });
 

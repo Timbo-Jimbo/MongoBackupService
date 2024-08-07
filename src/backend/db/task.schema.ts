@@ -37,6 +37,13 @@ export interface TaskDetailedProgress {
     countedThingName: string;
 }
 
+export enum TaskCancellationType
+{
+    NotCancellable = 'not_cancellable',
+    SafeToCancel = 'safe_to_cancel',
+    DangerousToCancel = 'dangerous_to_cancel',
+}
+
 export type TaskProgress = TaskUncertainProgress | TaskDetailedProgress;
 
 export const tasks = sqliteTable('tasks', {
@@ -45,7 +52,7 @@ export const tasks = sqliteTable('tasks', {
     type: text('type', { enum: sqliteStringEnum(TaskType) }).notNull(),
     isComplete: integer('is_complete', {mode: 'boolean'}).notNull().default(false),
     state: text('state', { enum: sqliteStringEnum(TaskState) }).notNull().default(TaskState.Running),
-    canBeCancelled: integer('can_be_cancelled', {mode: 'boolean'}).notNull().default(false),
+    cancellationType: text('cancellation_type', { enum: sqliteStringEnum(TaskCancellationType) }).notNull().default(TaskCancellationType.NotCancellable),
     cancelRequested: integer('cancel_requested', {mode: 'boolean'}).notNull().default(false),
     progress: text('progress', {mode: 'json'}).$type<TaskProgress>(),
     startedAt: integer('started_at', {mode: 'timestamp'}).notNull().$default(() => new Date()),

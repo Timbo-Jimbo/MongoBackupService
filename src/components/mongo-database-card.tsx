@@ -2,7 +2,7 @@ import { deleteMongoDatabase, getMongoDatabaseConnectionStatus, startManualBacku
 import { Backup } from "@backend/db/backup.schema";
 import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongodb-database.schema";
 import { Task, TaskType } from "@backend/db/task.schema";
-import { AlertDialog, AlertDialogOverlay, AlertDialogPortal, AlertDialogTrigger, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
+import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
 import { Badge } from "@comp/badge";
 import { Button } from "@comp/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuPortal, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@comp/dropdown-menu";
@@ -14,7 +14,7 @@ import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-l
 import { tryUseTaskListQueryClient } from "@lib/providers/task-list-query-client";
 import { cn, timeAgoString } from "@lib/utils";
 import { DotsVerticalIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 type MongoDatabaseCardProps = {
@@ -187,7 +187,7 @@ export function MongoDatabaseCard({
                             });
                           }}
                         >
-                          {timeAgoString(backup.createdAt)}
+                          From {timeAgoString(backup.createdAt)}
                         </DropdownMenuItem>    
                       ))}
                       {backups.length == 0 && (

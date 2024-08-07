@@ -5,7 +5,7 @@ import { v7 as uuidv7 } from "uuid";
 import { TaskCommands, TaskExecutor, TaskExecuteResult, TaskCancelledError, NoTaskParams as NoAdditionalParams } from "./task-runner";
 import { MongoDatabaseAccess } from "@backend/db/mongodb-database.schema";
 import { runAndForget } from "@lib/utils";
-import { ResolvedTaskState } from "@backend/db/task.schema";
+import { ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
 import { database } from "@backend/db";
 import { backups } from "@backend/db/backup.schema";
 
@@ -44,8 +44,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
 
         try
         {
-            await commands.setCanBeCancelled(true);
-
+            await commands.setCancellationType(TaskCancellationType.SafeToCancel);
             
             commands.reportProgress({ hasProgressValues: false,  message: "Gathering info" });
             const collectionWork = await getCollectionWork(mongoDatabaseAccess);
@@ -218,7 +217,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
             });
 
             await commands.throwIfCancelled();
-            await commands.setCanBeCancelled(false);
+            await commands.setCancellationType(TaskCancellationType.NotCancellable);
 
             await commands.reportProgress({ hasProgressValues: false,  message: "Recording backup entry" });
             

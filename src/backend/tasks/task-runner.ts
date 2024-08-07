@@ -1,13 +1,13 @@
 import { isMongoDatabaseBusyWithTask } from "@actions/mongo";
 import { database } from "@backend/db";
 import { MongoDatabaseAccess, mongoDatabases } from "@backend/db/mongodb-database.schema";
-import { TaskProgress, TaskType, tasks, TaskState, ResolvedTaskState } from "@backend/db/task.schema";
+import { TaskProgress, TaskType, tasks, TaskState, ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
 import { runAndForget } from "@lib/utils";
 import { eq } from "drizzle-orm";
 
 export type TaskCommands = {
   reportProgress: TaskRunner["queueProgressUpdate"];
-  setCanBeCancelled: TaskRunner["setCanBeCancelled"];
+  setCancellationType: TaskRunner["setCancellationType"];
   throwIfCancelled: TaskRunner["throwIfCancelled"];
 }
 
@@ -106,7 +106,7 @@ export class TaskRunner
         const result = await executor.execute(
           {
             reportProgress: taskRunner.queueProgressUpdate.bind(taskRunner),
-            setCanBeCancelled: taskRunner.setCanBeCancelled.bind(taskRunner),
+            setCancellationType: taskRunner.setCancellationType.bind(taskRunner),
             throwIfCancelled: taskRunner.throwIfCancelled.bind(taskRunner)
           },
           mongoDatabase,
@@ -154,9 +154,9 @@ export class TaskRunner
     this.dispatchProgressUpdate();
   }
 
-  async setCanBeCancelled(canBeCancelled: boolean)
+  async setCancellationType(type: TaskCancellationType)
   {
-    await database.update(tasks).set({ canBeCancelled }).where(eq(tasks.id, this.taskId));    
+    await database.update(tasks).set({ cancellationType: type }).where(eq(tasks.id, this.taskId));    
   }
 
   async throwIfCancelled()
