@@ -8,34 +8,7 @@ import { runAndForget } from "@lib/utils";
 import { ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
 import { database } from "@backend/db";
 import { backups } from "@backend/db/backup.schema";
-
-async function getCollectionWork(databaseAccess: MongoDatabaseAccess) {
-
-    const client = await MongoClient.connect(databaseAccess.connectionUri, {
-        connectTimeoutMS: 2000,
-        serverSelectionTimeoutMS: 2000
-    });
-    
-    try
-    {
-        const collectionsResult = await client.db(databaseAccess.databaseName).collections();
-        const output = [];
-        for(const collection of collectionsResult)
-        {
-            output.push({ 
-                name: collection.collectionName,
-                totalCount:  await collection.estimatedDocumentCount(),
-                backedUpCount: 0,
-            });
-        }
-
-        return output;
-    }
-    finally
-    {
-        await client.close();
-    }    
-}
+import { getCollectionMetadata } from "./mongo-utils";
 
 export const MongoBackupFolder = "data/backups";
 
@@ -52,7 +25,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
             await commands.setCancellationType(TaskCancellationType.SafeToCancel);
             
             commands.reportProgress({ hasProgressValues: false,  message: "Gathering info" });
-            const collectionWork = await getCollectionWork(mongoDatabaseAccess);
+            const collectionProgress = (await getCollectionMetadata(mongoDatabaseAccess)).map(c => ({ name: c.name, backedUpCount: 0, totalCount: c.totalCount }));
             await commands.throwIfCancelled();
 
             commands.reportProgress({ hasProgressValues: false,  message: "Initiating backup..." });
@@ -157,7 +130,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
 
                                 anyProgressChange = true;
 
-                                const collection = collectionWork.find(c => c.name === result.collectionName);
+                                const collection = collectionProgress.find(c => c.name === result.collectionName);
                                 if(collection)
                                 {
                                     collection.backedUpCount = result.backedUpDocCount;
@@ -173,9 +146,9 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
 
                     if(anyProgressChange) {
 
-                        const totalDocs = collectionWork.reduce((acc, c) => acc + c.totalCount, 0);
-                        const backedUpDocs = collectionWork.reduce((acc, c) => acc + c.backedUpCount, 0);
-                        const allDone = collectionWork.every(c => c.backedUpCount === c.totalCount);
+                        const totalDocs = collectionProgress.reduce((acc, c) => acc + c.totalCount, 0);
+                        const backedUpDocs = collectionProgress.reduce((acc, c) => acc + c.backedUpCount, 0);
+                        const allDone = collectionProgress.every(c => c.backedUpCount === c.totalCount);
 
                         commands.reportProgress({
                             message: `Backing up database.`,
@@ -232,7 +205,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
                 sizeBytes: statSync(backupArchivePath).size,
                 sourceMetadata: {
                     databaseName: mongoDatabaseAccess.databaseName,
-                    collections: collectionWork.map(cw => ({
+                    collections: collectionProgress.map(cw => ({
                         collectionName: cw.name,
                         documentCount: cw.totalCount,
                     })),

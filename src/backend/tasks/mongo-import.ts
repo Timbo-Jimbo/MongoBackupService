@@ -4,6 +4,7 @@ import { ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema
 import { database } from "@backend/db";
 import { eq } from "drizzle-orm";
 import { ProcessCancelledError, runProcessesPiped } from "@lib/process";
+import { ExtractProgressFromMongodumpOutput, getCollectionMetadata } from "./mongo-utils";
 
 export class MongoImportExecutor implements TaskExecutor<{importFromMongoDatabaseId:number}> {
     
@@ -19,12 +20,38 @@ export class MongoImportExecutor implements TaskExecutor<{importFromMongoDatabas
                 };
             }
 
+            await commands.setCancellationType(TaskCancellationType.SafeToCancel);
+            commands.reportProgress({ hasProgressValues: false,  message: "Gathering info" });
+            const databaseImportFromCollectionMetadata = await getCollectionMetadata(databaseToImportFrom);
+
             await commands.setCancellationType(TaskCancellationType.NotCancellable);
-            
-            commands.reportProgress({ hasProgressValues: false,  message: "Importing data" });
+            commands.reportProgress({ hasProgressValues: false,  message: "Starting import..." });
 
             try
             {
+              const progessExtractor = new ExtractProgressFromMongodumpOutput(
+                databaseToImportFrom,
+                databaseImportFromCollectionMetadata,
+                (progress) => {
+                  if(progress.current >= progress.total)
+                  {
+                    commands.reportProgress({ 
+                      hasProgressValues: false,
+                      message: `Waiting for documents to be processed...`
+                    });
+                  }
+                  else{
+                    commands.reportProgress({ 
+                      hasProgressValues: true,
+                      countedThingName: "Documents",
+                      total: progress.total,
+                      current: progress.current,
+                      message: `Copying over documents`
+                    });
+                  }
+                }
+              )
+
               await runProcessesPiped([
                 {
                   command: 'mongodump',
@@ -36,6 +63,7 @@ export class MongoImportExecutor implements TaskExecutor<{importFromMongoDatabas
                   ],
                   stderr: (data) => {
                     console.log("mongodump stderr", data.toString());
+                    progessExtractor.processData(data);
                   }
                 },
                 {
