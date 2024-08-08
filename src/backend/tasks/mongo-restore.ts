@@ -7,7 +7,8 @@ import { backups } from "@backend/db/backup.schema";
 import { database } from "@backend/db";
 import { eq } from "drizzle-orm";
 import { runAndForget } from "@lib/utils";
-import { runProcess } from "@lib/process";
+import { runProcess, runProcessesPiped } from "@lib/process";
+import { BackupCompressionFormat, Compression } from "./mongo-utils";
 
 export class MongoRestoreExecutor implements TaskExecutor<{backupId:number}> {
     
@@ -32,22 +33,64 @@ export class MongoRestoreExecutor implements TaskExecutor<{backupId:number}> {
                 };
             }
 
+            const compressionFormat = Compression.formatFromExtension(backupToRestore.archivePath);
+            const availableCompressionFormats = await Compression.determineAvailableFormats();
+
+            if(!availableCompressionFormats.includes(compressionFormat)) {
+                return {
+                    resolvedState: ResolvedTaskState.Error,
+                    message: `Compression format not supported (${compressionFormat})`,
+                };
+            }
+
             await commands.setCancellationType(TaskCancellationType.DangerousToCancel);
-            
             commands.reportProgress({ hasProgressValues: false,  message: "Restoring backup..." });
 
-            await runProcess({
-                command: "mongorestore",
-                args: [
-                    mongoDatabaseAccess.connectionUri,
-                    "--authenticationDatabase=admin",
-                    `--nsInclude=${mongoDatabaseAccess.databaseName}.*`,
-                    "--drop",
-                    "--noIndexRestore",
-                    "--gzip",
-                    `--archive=${backupToRestore.archivePath}`,
-                ]
-            });
+            if(compressionFormat === BackupCompressionFormat.SevenZip) {
+                console.log("Decompressing 7zip archive and restoring");
+
+                await runProcessesPiped([
+                    {
+                        command: "7z",
+                        args: ["x", backupToRestore.archivePath, "-so"]
+                    },
+                    {
+                        command: "mongorestore",
+                        args: [
+                            mongoDatabaseAccess.connectionUri,
+                            "--authenticationDatabase=admin",
+                            `--nsInclude=${mongoDatabaseAccess.databaseName}.*`,
+                            "--drop",
+                            "--noIndexRestore",
+                            "--archive"
+                        ]
+                    }
+                ]);
+
+            }
+            else if(compressionFormat === BackupCompressionFormat.Gzip) {
+                
+                console.log("Decompressing gzip archive and restoring");
+
+                await runProcess({
+                    command: "mongorestore",
+                    args: [
+                        mongoDatabaseAccess.connectionUri,
+                        "--authenticationDatabase=admin",
+                        `--nsInclude=${mongoDatabaseAccess.databaseName}.*`,
+                        "--drop",
+                        "--noIndexRestore",
+                        "--gzip",
+                        `--archive=${backupToRestore.archivePath}`,
+                    ]
+                });
+            }
+            else {
+                return {
+                    resolvedState: ResolvedTaskState.Error,
+                    message: `Unsupported compression format: ${compressionFormat}`,
+                };
+            }
 
             return { 
                 resolvedState: ResolvedTaskState.Sucessful, 

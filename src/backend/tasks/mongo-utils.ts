@@ -1,5 +1,7 @@
 import { MongoDatabaseAccess } from "@backend/db/mongodb-database.schema";
 import { MongoClient } from "mongodb";
+import { exec } from "node:child_process";
+import { promisify } from "util";
 
 export class MongodumpOutputProgressExtractor 
 {
@@ -138,4 +140,50 @@ export async function getCollectionMetadata(databaseAccess: MongoDatabaseAccess)
     {
         await client.close();
     }    
+}
+
+const execPromise = promisify(exec);
+export enum BackupCompressionFormat
+{
+    SevenZip = '7z',
+    Gzip = 'gz'
+}
+
+export class Compression 
+{
+    private static availableFormatsCache: BackupCompressionFormat[] | null = null;
+
+    static async determineAvailableFormats(): Promise<BackupCompressionFormat[]> {
+
+        if(this.availableFormatsCache) {
+            return this.availableFormatsCache;
+        }
+
+        const availableTools: BackupCompressionFormat[] = [];
+    
+        try {
+            await execPromise('7z');
+            availableTools.push(BackupCompressionFormat.SevenZip);
+        } catch (error) {}
+    
+        availableTools.push(BackupCompressionFormat.Gzip);
+    
+        this.availableFormatsCache =  availableTools;
+        return availableTools;
+    }
+
+    static formatFromExtension(extensionOrPath: string): BackupCompressionFormat {
+
+        let extension = extensionOrPath;
+
+        if(extensionOrPath.includes('.')) {
+            extension = extensionOrPath.split('.').pop()!;
+        }
+        
+        switch(extension) {
+            case '7z': return BackupCompressionFormat.SevenZip;
+            case 'gz': return BackupCompressionFormat.Gzip;
+            default: throw new Error(`Unknown extension: ${extension}`);
+        }
+    }
 }
