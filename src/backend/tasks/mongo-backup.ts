@@ -11,7 +11,11 @@ import { backups } from "@backend/db/backup.schema";
 
 async function getCollectionWork(databaseAccess: MongoDatabaseAccess) {
 
-    const client = await MongoClient.connect(databaseAccess.connectionUri);
+    const client = await MongoClient.connect(databaseAccess.connectionUri, {
+        connectTimeoutMS: 2000,
+        serverSelectionTimeoutMS: 2000
+    });
+    
     try
     {
         const collectionsResult = await client.db(databaseAccess.databaseName).collections();

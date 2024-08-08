@@ -236,9 +236,9 @@ export function MongoDatabaseCard({
                           <span className="opacity-50">{database.databaseName}</span>
                         </DropdownMenuItem>    
                       ))}
-                      {backups.length == 0 && (
+                      {otherDatabases.length == 0 && (
                         <DropdownMenuItem disabled>
-                          No backups available
+                          No Other Databases
                         </DropdownMenuItem>
                       )}
                     </DropdownMenuSubContent>

@@ -52,7 +52,10 @@ export const getMongoDatabaseConnectionStatus = withAuthOrRedirect(async (mongoD
         throw new Error(`Mongo Database with id ${mongoDatabaseId} not found`);
 
     const exeCheck = async () => {
-        const client = await MongoClient.connect(mongoDatabase.connectionUri);
+        const client = await MongoClient.connect(mongoDatabase.connectionUri, {
+            connectTimeoutMS: 2000,
+            serverSelectionTimeoutMS: 2000
+        });
         try
         {
             const pingResult = await client.db().admin().ping();

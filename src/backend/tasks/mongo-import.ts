@@ -1,96 +1,12 @@
-import { spawn } from "node:child_process";
 import { TaskCommands, TaskExecutor, TaskExecuteResult, TaskCancelledError } from "./task-runner";
 import { MongoDatabaseAccess, mongoDatabases } from "@backend/db/mongodb-database.schema";
 import { ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
 import { database } from "@backend/db";
 import { eq } from "drizzle-orm";
-
-type DumpRestoreResult = {
-    wasSuccessful: boolean;
-    error?: string;
-}
+import { ProcessCancelledError, runProcessesPiped } from "@lib/process";
 
 export class MongoImportExecutor implements TaskExecutor<{importFromMongoDatabaseId:number}> {
     
-    mongoDumpRestore(
-        sourceUri: string,
-        sourceDb: string,
-        destUri: string,
-        destDb: string
-      ): Promise<DumpRestoreResult> {
-        return new Promise((resolve, reject) => {
-
-          const mongodump = spawn('mongodump', [
-            `--uri=${sourceUri}`,
-            '--authenticationDatabase=admin',
-            `--db=${sourceDb}`,
-            '--archive'
-          ]);
-      
-          const mongorestore = spawn('mongorestore', [
-            `--uri=${destUri}`,
-            '--authenticationDatabase=admin',
-            `--nsInclude=${sourceDb}.*`,
-            `--nsFrom=${sourceDb}.*`,
-            `--nsTo=${destDb}.*`,
-            '--noIndexRestore',
-            '--drop',
-            '--archive'
-          ]);
-      
-          mongodump.stdout.pipe(mongorestore.stdin);
-      
-          let hasResult = false;
-
-          const ResolveWithResult = (result: DumpRestoreResult) =>
-          {
-            if (hasResult)
-              return;
-     
-            mongodump.kill();
-            mongorestore.kill();
-            
-            hasResult = true;
-            console.log("ResolveWithResult", result);
-            resolve(result);
-          }
-      
-          mongorestore.on('close', (code) => {
-
-            console.log("mongorestore close", code);
-
-            if (code === 0) {
-                ResolveWithResult({ wasSuccessful: true });
-            } else {
-                ResolveWithResult({ wasSuccessful: false, error: `mongorestore process exited with code ${code}.` });
-            }
-          });
-      
-          mongodump.on('error', (error) => {
-
-            console.log("mongodump error", error);
-
-            ResolveWithResult({ wasSuccessful: false, error: `Failed to start mongodump process: ${error}` });
-          });
-      
-          mongorestore.on('error', (error) => {
-            
-            console.log("mongorestore error", error);
-
-            ResolveWithResult({ wasSuccessful: false, error: `Failed to start mongorestore process: ${error}` });
-          });
-      
-          mongodump.on('close', (code) => {
-
-            console.log("mongodump close", code);
-
-            if (code !== 0) {
-                ResolveWithResult({ wasSuccessful: false, error: `mongodump process exited with code ${code}.` });
-            }
-          });
-        });
-      }
-
     async execute(commands: TaskCommands, mongoDatabaseAccess: MongoDatabaseAccess, {importFromMongoDatabaseId}: {importFromMongoDatabaseId:number}): Promise<TaskExecuteResult> {
         try
         {
@@ -106,24 +22,55 @@ export class MongoImportExecutor implements TaskExecutor<{importFromMongoDatabas
             await commands.setCancellationType(TaskCancellationType.NotCancellable);
             
             commands.reportProgress({ hasProgressValues: false,  message: "Importing data" });
-            const processResult = await this.mongoDumpRestore(
-                databaseToImportFrom.connectionUri,
-                databaseToImportFrom.databaseName,
-                mongoDatabaseAccess.connectionUri,
-                mongoDatabaseAccess.databaseName
-            );
 
-            if(!processResult.wasSuccessful) {
-                return {
-                    resolvedState: ResolvedTaskState.Error,
-                    message: `Failed to import data: ${processResult.error}`,
-                };
+            try
+            {
+              await runProcessesPiped([
+                {
+                  command: 'mongodump',
+                  args: [
+                    `--uri=${databaseToImportFrom.connectionUri}`,
+                    '--authenticationDatabase=admin',
+                    `--db=${databaseToImportFrom.databaseName}`,
+                    '--archive'
+                  ],
+                  stderr: (data) => {
+                    console.log("mongodump stderr", data.toString());
+                  }
+                },
+                {
+                  command: 'mongorestore',
+                  args: [
+                    `--uri=${mongoDatabaseAccess.connectionUri}`,
+                    '--authenticationDatabase=admin',
+                    `--nsInclude=${databaseToImportFrom.databaseName}.*`,
+                    `--nsFrom=${databaseToImportFrom.databaseName}.*`,
+                    `--nsTo=${mongoDatabaseAccess.databaseName}.*`,
+                    '--noIndexRestore',
+                    '--drop',
+                    '--archive'
+                  ],
+                  stderr: (data) => {
+                    console.log("mongorestore stderr", data.toString());
+                  }
+                }
+              ]);
+              
+              return { 
+                resolvedState: ResolvedTaskState.Sucessful, 
+                message: "Imported successfully",
+              };
             }
-            else {
-                return { 
-                    resolvedState: ResolvedTaskState.Sucessful, 
-                    message: "Imported successfully",
-                };
+            catch(e)
+            {
+              if(e instanceof ProcessCancelledError)
+              {
+                throw new TaskCancelledError();
+              }
+              return { 
+                resolvedState: ResolvedTaskState.Error,
+                message: "Failed to execute import commands",
+              };
             }
         }
         catch(e)
