@@ -33,14 +33,15 @@ async function getCollectionWork(databaseAccess: MongoDatabaseAccess) {
     }    
 }
 
+export const MongoBackupFolder = "data/backups";
+
 export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams> {
     
     async execute(commands: TaskCommands, mongoDatabaseAccess: MongoDatabaseAccess): Promise<TaskExecuteResult> {
-        const backupFolder = "data/backups";
-        mkdirSync(backupFolder, { recursive: true });
+        mkdirSync(MongoBackupFolder, { recursive: true });
         const now = new Date();
         const backupArchiveName = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${mongoDatabaseAccess.databaseName}-${uuidv7()}-backup.gz`;
-        const backupArchivePath = `${backupFolder}/${backupArchiveName}`;  
+        const backupArchivePath = `${MongoBackupFolder}/${backupArchiveName}`;  
 
         try
         {

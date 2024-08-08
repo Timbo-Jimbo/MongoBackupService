@@ -51,10 +51,14 @@ export class MongoImportExecutor implements TaskExecutor<{importFromMongoDatabas
             mongorestore.kill();
             
             hasResult = true;
+            console.log("ResolveWithResult", result);
             resolve(result);
           }
       
           mongorestore.on('close', (code) => {
+
+            console.log("mongorestore close", code);
+
             if (code === 0) {
                 ResolveWithResult({ wasSuccessful: true });
             } else {
@@ -63,14 +67,23 @@ export class MongoImportExecutor implements TaskExecutor<{importFromMongoDatabas
           });
       
           mongodump.on('error', (error) => {
+
+            console.log("mongodump error", error);
+
             ResolveWithResult({ wasSuccessful: false, error: `Failed to start mongodump process: ${error}` });
           });
       
           mongorestore.on('error', (error) => {
+            
+            console.log("mongorestore error", error);
+
             ResolveWithResult({ wasSuccessful: false, error: `Failed to start mongorestore process: ${error}` });
           });
       
           mongodump.on('close', (code) => {
+
+            console.log("mongodump close", code);
+
             if (code !== 0) {
                 ResolveWithResult({ wasSuccessful: false, error: `mongodump process exited with code ${code}.` });
             }
