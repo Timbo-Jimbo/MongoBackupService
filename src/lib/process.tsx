@@ -1,7 +1,8 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import { runAndForget } from "./utils";
 
-export type CancelSignal = {
-    onCancel?: () => void;
+type CancelSignal = {
+    onCancel?: (reason?: any) => void;
 }
 
 export type ProcessSpawnInfo = {
@@ -17,11 +18,11 @@ export class ProcessCancelledError extends Error {
     }
 }
 
-export const runProcess = async (startInfo: ProcessSpawnInfo, cancelToken: CancelSignal = { }): Promise<void> => {
-    await runProcessesPiped([startInfo], cancelToken);
+export const runProcess = async (startInfo: ProcessSpawnInfo, cancellationCheck?: () => Promise<void> | undefined): Promise<void> => {
+    await runProcessesPiped([startInfo], cancellationCheck);
 }
 
-export const runProcessesPiped = async (startInfos: ProcessSpawnInfo[], cancelToken: CancelSignal = { }): Promise<void> => {
+export const runProcessesPiped = async (startInfos: ProcessSpawnInfo[], cancellationCheck?: () => Promise<void> | undefined ): Promise<void> => {
     const process: ChildProcessWithoutNullStreams[] = [];
 
     for(let i = 0; i < startInfos.length; i++) {
@@ -42,17 +43,34 @@ export const runProcessesPiped = async (startInfos: ProcessSpawnInfo[], cancelTo
         }
     }
 
+    const cancelSignal: CancelSignal = {};
+    let stopMonitoringForCancellation = false;
+    runAndForget(async () => {
+        while(cancellationCheck && !stopMonitoringForCancellation) {
+            try {
+                await cancellationCheck();
+                await new Promise<void>(resolve => setTimeout(resolve, 500));
+            }
+            catch (e) {
+                if(cancelSignal.onCancel)
+                    cancelSignal.onCancel(e);
+                break;
+            }
+        }
+    });
+
     await new Promise<void>((resolve, reject) => {
 
         const cleanUpAll = () => {
             process.forEach(p => p.removeListener('close', onClose));
             process.forEach(p => p.kill());
-            cancelToken.onCancel = undefined;
+            cancelSignal.onCancel = undefined;
+            stopMonitoringForCancellation = true;
         }
 
-        const onCancel = () => {
+        const onCancel = (reason?: any) => {
             cleanUpAll();
-            reject(new ProcessCancelledError());
+            reject(reason || new ProcessCancelledError());
         }
 
         const onClose = (code: number) => {
@@ -69,6 +87,6 @@ export const runProcessesPiped = async (startInfos: ProcessSpawnInfo[], cancelTo
             reject(error);
         });
 
-        cancelToken.onCancel = onCancel;
+        cancelSignal.onCancel = onCancel;
     });
 }

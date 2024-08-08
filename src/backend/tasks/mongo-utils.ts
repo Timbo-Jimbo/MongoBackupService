@@ -1,7 +1,7 @@
 import { MongoDatabaseAccess } from "@backend/db/mongodb-database.schema";
 import { MongoClient } from "mongodb";
 
-export class ExtractProgressFromMongodumpOutput 
+export class MongodumpOutputProgressExtractor 
 {
     private perCollectionProgress: { name: string, backedUpCount: number, totalCount: number }[] = [];
 

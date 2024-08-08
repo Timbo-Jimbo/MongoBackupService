@@ -29,9 +29,9 @@ function ConnectionBadge({isPending, isFetching, data}: {isPending: boolean, isF
   return (
     <>
       {isPending && (
-        <Badge variant={"outline"} >
-          <LoadingSpinner className="w-4 h-4 mr-2" />
-          Pinging...
+        <Badge variant={"outline"} className="animate-pulse" >
+          <SignalIcon className="w-4 h-4 mr-2" />
+          Pinging
         </Badge>
       )}
       {data && data.connectionStatus == MongoDatabaseConnection.Online && (
