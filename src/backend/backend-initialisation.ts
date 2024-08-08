@@ -14,6 +14,7 @@ export async function bootstrap() {
         await database.update(tasks).set({
             state: TaskState.Error,
             isComplete: true,
+            completedAt: new Date(),
             progress: {
                 hasProgressValues: false,
                 message: "Task was interupted by server shutdown."
