@@ -12,7 +12,7 @@ export async function bootstrap() {
         console.log("Pending task on start up... cleaning up!", task.id);
         
         await database.update(tasks).set({
-            state: TaskState.Error,
+            state: TaskState.Failed,
             isComplete: true,
             completedAt: new Date(),
             progress: {

@@ -23,3 +23,7 @@ export function timeAgoString(time: Date) {
   const lessThanOneMinSinceBackup = msSinceBackup < 60000;
   return lessThanOneMinSinceBackup ? "Just now" : (humanizeDuration(msSinceBackup, {round: true, units:["y","mo","w","d", "h", "m"], largest: 1}) + " ago");
 }
+
+export function humanReadableEnumString(enumValue: string) {
+  return enumValue.toString().replace("_", " ");
+}

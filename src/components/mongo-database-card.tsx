@@ -1,11 +1,11 @@
 import { deleteMongoDatabase, getMongoDatabaseConnectionStatus, startImport, startManualBackup, startRestore } from "@actions/mongo";
 import { Backup } from "@backend/db/backup.schema";
-import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongodb-database.schema";
-import { Task, TaskType } from "@backend/db/task.schema";
+import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongo-database.schema";
+import { TaskWithInvolvements } from "@backend/db/task.schema";
 import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
 import { Badge } from "@comp/badge";
 import { Button } from "@comp/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuPortal, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@comp/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuPortal, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuLabel } from "@comp/dropdown-menu";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { toast, toastForActionResult } from "@comp/toasts";
 import { ArrowDownOnSquareIcon, ArrowPathIcon, SignalIcon, SignalSlashIcon, Square3Stack3DIcon, TrashIcon } from "@heroicons/react/20/solid";
@@ -15,13 +15,18 @@ import { tryUseTaskListQueryClient } from "@lib/providers/task-list-query-client
 import { cn, timeAgoString } from "@lib/utils";
 import { DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { Fragment, useState } from "react";
+
+type OtherDatabase = {
+  mongoDatabase: MongoDatabaseCensored,
+  backups: Backup[],
+}
 
 type MongoDatabaseCardProps = {
   mongoDatabase: MongoDatabaseCensored,
-  otherDatabases: MongoDatabaseCensored[],
-  backups: Backup[],
-  latestTask?: Task
+  ownBackups: Backup[],
+  latestTask?: TaskWithInvolvements
+  otherDatabases: OtherDatabase[],
 };
 
 function ConnectionBadge({isPending, isFetching, data}: {isPending: boolean, isFetching: boolean, data: {connectionStatus: MongoDatabaseConnection} | undefined}) {
@@ -56,32 +61,19 @@ function ConnectionBadge({isPending, isFetching, data}: {isPending: boolean, isF
   )
 }
 
-function taskTypeString(task: Task) {
-  switch(task.type){
-    case TaskType.Restore: return "Restoring Backup";
-    case TaskType.Import: return "Importing from another database";
-    case TaskType.ManualBackup: return "Performing Backup (Manual Trigger)";
-    case TaskType.ScheduledBackup: return "Performing Backup (Scheduled)";
-    default: return "Running Task";
-  }
-}
-
 function WorkBadge({
+  mongoDatabaseId,
   task
 }: {
-  task?: Task | undefined
+  mongoDatabaseId: number,
+  task: TaskWithInvolvements | undefined
 }) {
   return (
     <>
-      {(!task || task.completedAt) && (
-        <Badge variant={"secondary"}>
-          No Active Tasks
-        </Badge>
-      )}
       {(task && !task.isComplete) && (
         <Badge variant={"outline"} className="animate-pulse">
           <LoadingSpinner className="w-4 h-4 mr-2" />
-          {taskTypeString(task)}
+          {task.involvements.find(i => i.mongoDatabaseId == mongoDatabaseId)?.reason ?? "Working on a task"}
         </Badge>
       )}
     </>
@@ -90,9 +82,9 @@ function WorkBadge({
 
 export function MongoDatabaseCard({
   mongoDatabase,
+  ownBackups,
+  latestTask,
   otherDatabases,
-  backups,
-  latestTask
 }: MongoDatabaseCardProps) {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -161,7 +153,7 @@ export function MongoDatabaseCard({
         <div className="flex flex-row gap-2 place-items-center">              
           <h1 className="text-lg font-semibold capitalize">{mongoDatabase.referenceName}</h1>
           <ConnectionBadge isPending={dbStatusQuery.isPending} isFetching={dbStatusQuery.isFetching} data={dbStatusQuery.data} />
-          <WorkBadge task={latestTask}/>
+          <WorkBadge mongoDatabaseId={mongoDatabase.id} task={latestTask}/>
         </div>
         <div className="flex flex-row flex-grow gap-2 justify-end place-items-center">
             <DropdownMenu>
@@ -189,7 +181,10 @@ export function MongoDatabaseCard({
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuSubContent>
-                      {backups.map((backup) => (
+                      <DropdownMenuLabel>
+                        Own Backup
+                      </DropdownMenuLabel>
+                      {ownBackups.map((backup) => (
                         <DropdownMenuItem 
                           key={backup.id}
                           onClick={() => {
@@ -204,11 +199,52 @@ export function MongoDatabaseCard({
                           From {timeAgoString(backup.createdAt)}
                         </DropdownMenuItem>    
                       ))}
-                      {backups.length == 0 && (
+                      {ownBackups.length == 0 && (
                         <DropdownMenuItem disabled>
                           No backups available
                         </DropdownMenuItem>
                       )}
+                      <DropdownMenuSeparator/>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          From Other...
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          {otherDatabases.map((otherDatabase, index) => (
+                            <Fragment key={otherDatabase.mongoDatabase.id}>
+                              <DropdownMenuLabel>
+                                {otherDatabase.mongoDatabase.referenceName}
+                              </DropdownMenuLabel>
+                              {otherDatabase.backups.map((backup) => (
+                                <DropdownMenuItem 
+                                  key={backup.id}
+                                  onClick={() => {
+                                    const toastId = toast.loading("Initiating restore...");
+                                    restoreBackupMutation.mutate(backup.id, {
+                                      onSettled: () => {
+                                        toast.dismiss(toastId);
+                                      }
+                                    });
+                                  }}
+                                >
+                                  From {timeAgoString(backup.createdAt)}
+                                </DropdownMenuItem>    
+                              ))}
+                              {otherDatabase.backups.length == 0 && (
+                                <DropdownMenuItem disabled>
+                                  No backups available
+                                </DropdownMenuItem>
+                              )}
+                              {index < otherDatabases.length - 1 && <DropdownMenuSeparator/>}
+                            </Fragment>
+                          ))}
+                          {otherDatabases.length == 0 && (
+                            <DropdownMenuItem disabled>
+                              No Other Databases
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
                     </DropdownMenuSubContent>
                   </DropdownMenuPortal>
                 </DropdownMenuSub>
@@ -219,7 +255,7 @@ export function MongoDatabaseCard({
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuSubContent>
-                      {otherDatabases.map((database) => (
+                      {otherDatabases.map(otherDb => otherDb.mongoDatabase).map((database) => (
                         <DropdownMenuItem 
                           key={database.id}
                           className="flex-col items-start"

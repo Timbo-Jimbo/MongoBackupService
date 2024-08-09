@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { TaskCommands, TaskExecutor, TaskExecuteResult, TaskCancelledError } from "./task-runner";
-import { MongoDatabaseAccess } from "@backend/db/mongodb-database.schema";
+import { MongoDatabaseAccess } from "@backend/db/mongo-database.schema";
 import { ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
 import { backups } from "@backend/db/backup.schema";
 import { database } from "@backend/db";
@@ -10,16 +10,22 @@ import { runAndForget } from "@lib/utils";
 import { runProcess, runProcessesPiped } from "@lib/process";
 import { BackupCompressionFormat, Compression } from "./mongo-utils";
 
-export class MongoRestoreExecutor implements TaskExecutor<{backupId:number}> {
+type TaskParams = {backupId:number};
+
+export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
     
-    async execute(commands: TaskCommands, mongoDatabaseAccess: MongoDatabaseAccess, {backupId: backupIdToRestore}: {backupId: number}): Promise<TaskExecuteResult> {
+    async prepare(databaseAccess: MongoDatabaseAccess, taskParams: TaskParams): Promise<void> { }
+
+    async execute(commands: TaskCommands, databases: MongoDatabaseAccess[], {backupId: backupIdToRestore}: TaskParams): Promise<TaskExecuteResult> {
         try
         {
+            const targetDatabase = databases[0];
+            
             const backupToRestore = await database.query.backups.findFirst({ where: eq(backups.id, backupIdToRestore) });
             
             if(!backupToRestore) {
                 return {
-                    resolvedState: ResolvedTaskState.Error,
+                    resolvedState: ResolvedTaskState.Failed,
                     message: "Backup not found",
                 };
             }
@@ -28,7 +34,7 @@ export class MongoRestoreExecutor implements TaskExecutor<{backupId:number}> {
 
             if(!exists) {
                 return {
-                    resolvedState: ResolvedTaskState.Error,
+                    resolvedState: ResolvedTaskState.Failed,
                     message: "Backup archive file not found",
                 };
             }
@@ -38,48 +44,49 @@ export class MongoRestoreExecutor implements TaskExecutor<{backupId:number}> {
 
             if(!availableCompressionFormats.includes(compressionFormat)) {
                 return {
-                    resolvedState: ResolvedTaskState.Error,
-                    message: `Compression format not supported (${compressionFormat})`,
+                    resolvedState: ResolvedTaskState.Failed,
+                    message: `Compression format of the selected backup is not supported on this system (${compressionFormat})`,
                 };
             }
 
             await commands.setCancellationType(TaskCancellationType.DangerousToCancel);
             commands.reportProgress({ hasProgressValues: false,  message: "Restoring backup..." });
 
-            if(compressionFormat === BackupCompressionFormat.SevenZip) {
-                console.log("Decompressing 7zip archive and restoring");
-
+            console.log(`Backups compression format is ${compressionFormat}`);
+            if(compressionFormat === BackupCompressionFormat.ZStandard) {
                 await runProcessesPiped([
                     {
-                        command: "7z",
-                        args: ["x", backupToRestore.archivePath, "-so"]
+                        command: 'zstd',
+                        args: [
+                            '-d', 
+                            '-c',
+                            '--long=30',
+                            backupToRestore.archivePath
+                        ],
+                        stderr: (data) => {
+                            console.log(data.toString());
+                        }
                     },
                     {
                         command: "mongorestore",
                         args: [
-                            mongoDatabaseAccess.connectionUri,
+                            targetDatabase.connectionUri,
                             "--authenticationDatabase=admin",
-                            `--nsInclude=${mongoDatabaseAccess.databaseName}.*`,
+                            `--nsInclude=${targetDatabase.databaseName}.*`,
                             "--drop",
-                            "--noIndexRestore",
                             "--archive"
                         ]
                     }
                 ]);
-
             }
             else if(compressionFormat === BackupCompressionFormat.Gzip) {
-                
-                console.log("Decompressing gzip archive and restoring");
-
                 await runProcess({
                     command: "mongorestore",
                     args: [
-                        mongoDatabaseAccess.connectionUri,
+                        targetDatabase.connectionUri,
                         "--authenticationDatabase=admin",
-                        `--nsInclude=${mongoDatabaseAccess.databaseName}.*`,
+                        `--nsInclude=${targetDatabase.databaseName}.*`,
                         "--drop",
-                        "--noIndexRestore",
                         "--gzip",
                         `--archive=${backupToRestore.archivePath}`,
                     ]
@@ -87,13 +94,13 @@ export class MongoRestoreExecutor implements TaskExecutor<{backupId:number}> {
             }
             else {
                 return {
-                    resolvedState: ResolvedTaskState.Error,
+                    resolvedState: ResolvedTaskState.Failed,
                     message: `Unsupported compression format: ${compressionFormat}`,
                 };
             }
 
             return { 
-                resolvedState: ResolvedTaskState.Sucessful, 
+                resolvedState: ResolvedTaskState.Completed, 
                 message: "Restored successfully",
             };
         }

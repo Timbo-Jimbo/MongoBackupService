@@ -1,7 +1,7 @@
 import { deleteTask, updateTask } from "@actions/tasks";
 import { Task, TaskCancellationType, TaskState } from "@backend/db/task.schema";
 import { Badge } from "@comp/badge";
-import { Button, ButtonWithSpinner } from "@comp/button";
+import { Button } from "@comp/button";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { Progress, ProgressUncertain } from "@comp/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@comp/tooltip";
@@ -13,12 +13,12 @@ import { useTaskListQueryClient } from "@lib/providers/task-list-query-client";
 import { tryUseMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
 import { tryUseBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { DurationDisplay } from "./time-since-display";
-import { Cross2Icon, CrossCircledIcon, DotsVerticalIcon, TrashIcon } from "@radix-ui/react-icons";
+import { Cross2Icon, DotsVerticalIcon } from "@radix-ui/react-icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@comp/dropdown-menu";
 import { toast } from "sonner";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
-import { title } from "process";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@comp/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@comp/alert";
+import { humanReadableEnumString } from "@lib/utils";
 
 export function TaskCard({
   task,
@@ -86,18 +86,18 @@ export function TaskCard({
         <div className="flex flex-col gap-2 w-full">
           <div className="flex flex-row gap-2 place-items-center w-full">
             <div className="flex flex-row gap-2 place-items-center w-full">
-              <h1 className="text-lg font-semibold capitalize">{task.type.toString().replace("_", " ")}</h1>
+              <h1 className="text-lg font-semibold capitalize">{humanReadableEnumString(task.type)}</h1>
               {!task.isComplete && (
                 <Badge variant={"outline"} className="animate-pulse" >
                   Running
                 </Badge>
               )}
               {task.isComplete && (
-                <Badge variant={task.state == TaskState.Sucessful ? "positive" : "destructive"} className="capitalize">
+                <Badge variant={task.state == TaskState.Completed ? "positive" : "destructive"} className="capitalize">
                   {task.state === TaskState.Cancelled && <XCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
-                  {task.state === TaskState.Error && <ExclamationCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
-                  {task.state === TaskState.Sucessful && <CheckCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
-                  {task.state.toString().replace("_", " ")}
+                  {task.state === TaskState.Failed && <ExclamationCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
+                  {task.state === TaskState.Completed && <CheckCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
+                  {humanReadableEnumString(task.state)}
                 </Badge>
               )}
               <Badge variant={"secondary"}>

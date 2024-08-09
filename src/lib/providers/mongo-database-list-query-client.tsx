@@ -1,17 +1,17 @@
 "use client"
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAllBackupsForDatabase } from "@actions/backups";
 import { getAllMongoDatabases, addMongoDatabase, tryGetLatestTask } from "@actions/mongo";
 import { Backup } from "@backend/db/backup.schema";
-import { MongoDatabaseCensored, InsertMongoDatabase } from "@backend/db/mongodb-database.schema";
-import { Task } from "@backend/db/task.schema";
+import { MongoDatabaseCensored, InsertMongoDatabase } from "@backend/db/mongo-database.schema";
+import { TaskWithInvolvements } from "@backend/db/task.schema";
 
 type QueryListEntry = {
     mongoDatabase: MongoDatabaseCensored,
     backups: Backup[],
-    latestTask?: Task
+    latestTask?: TaskWithInvolvements
 }
 
 const createMongoDatabaseListQueryClient = () => {

@@ -1,11 +1,11 @@
 import { sqliteStringEnum } from "@backend/utils";
 import { relations } from "drizzle-orm";
 import { integer, sqliteTable, SQLiteUpdateSetSource, text } from "drizzle-orm/sqlite-core";
-import { mongoDatabases } from "./mongodb-database.schema";
+import { MongoDatabaseTaskInvolvement, mongoDatabaseTaskInvolvements } from "./mongo-database-task-involvement.schema";
 
 export enum ResolvedTaskState {
-    Sucessful = 'successful',
-    Error = 'error',
+    Completed = 'completed',
+    Failed = 'failed',
     Cancelled = 'cancelled'
 }
 
@@ -48,10 +48,9 @@ export type TaskProgress = TaskUncertainProgress | TaskDetailedProgress;
 
 export const tasks = sqliteTable('tasks', {
     id: integer('id').primaryKey({autoIncrement: true}),
-    mongoDatabaseId: integer('mongo_database_id').notNull(),
-    type: text('type', { enum: sqliteStringEnum(TaskType) }).notNull(),
+    type: text('type', { enum: sqliteStringEnum(TaskType) }).$type<TaskType>().notNull(),
     isComplete: integer('is_complete', {mode: 'boolean'}).notNull().default(false),
-    state: text('state', { enum: sqliteStringEnum(TaskState) }).notNull().default(TaskState.Running),
+    state: text('state', { enum: sqliteStringEnum(TaskState) }).$type<TaskState>().notNull().default(TaskState.Running),
     cancellationType: text('cancellation_type', { enum: sqliteStringEnum(TaskCancellationType) }).notNull().default(TaskCancellationType.NotCancellable),
     cancelRequested: integer('cancel_requested', {mode: 'boolean'}).notNull().default(false),
     progress: text('progress', {mode: 'json'}).$type<TaskProgress>(),
@@ -60,14 +59,11 @@ export const tasks = sqliteTable('tasks', {
     completedAt: integer('completed_at', {mode: 'timestamp'})
 });
 
-
-export const tasksRelations = relations(tasks, ({ one }) => ({
-    mongoDatabase: one(mongoDatabases, {
-        fields: [tasks.mongoDatabaseId],
-        references: [mongoDatabases.id]
-    }),
+export const tasksRelations = relations(tasks, ({ many }) => ({
+    involvements: many(mongoDatabaseTaskInvolvements),
 }));
 
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = typeof tasks.$inferInsert;
 export type UpdateTask = SQLiteUpdateSetSource<typeof tasks>
+export type TaskWithInvolvements = Task & { involvements: MongoDatabaseTaskInvolvement[] };

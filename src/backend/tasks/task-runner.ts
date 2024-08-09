@@ -1,8 +1,9 @@
 import { isMongoDatabaseBusyWithTask } from "@actions/mongo";
 import { database } from "@backend/db";
-import { MongoDatabaseAccess, mongoDatabases } from "@backend/db/mongodb-database.schema";
+import { InsertMongoDatabaseTaskInvolvement, mongoDatabaseTaskInvolvements } from "@backend/db/mongo-database-task-involvement.schema";
+import { MongoDatabase, MongoDatabaseAccess, mongoDatabases } from "@backend/db/mongo-database.schema";
 import { TaskProgress, TaskType, tasks, TaskState, ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
-import { runAndForget } from "@lib/utils";
+import { humanReadableEnumString, runAndForget } from "@lib/utils";
 import { eq } from "drizzle-orm";
 
 export type TaskCommands = {
@@ -20,7 +21,12 @@ export type NoTaskParams = undefined | null | void;
 type TaskExecutorConstructor<TParam> = { new(): TaskExecutor<TParam>, paramType?: TParam };
 
 export abstract class TaskExecutor<TExecuteParams = any> {
-  abstract execute(commands: TaskCommands, databaeAccess: MongoDatabaseAccess, additionalParams: TExecuteParams): Promise<TaskExecuteResult>;
+  abstract execute(commands: TaskCommands, databases: MongoDatabaseAccess[], additionalParams: TExecuteParams): Promise<TaskExecuteResult>;
+}
+
+type TaskDatabaseInput = {
+  mongoDatabaseId: number;
+  involvementReason: string;
 }
 
 export class TaskRunner 
@@ -39,62 +45,73 @@ export class TaskRunner
 
   static async startTask<TParam = any>(
   {
-    mongoDatabaseId,
     taskType,
-    executorClass: executorType,
+    executorClass,
     executorParams,
-    initialTaskUpdate
+    initialTaskUpdate,
+    databases = [],
   }: {
-    mongoDatabaseId: number,
     taskType: TaskType,
     executorClass: TaskExecutorConstructor<TParam>,
-    initialTaskUpdate?: string
+    initialTaskUpdate?: string,
+    databases?: TaskDatabaseInput[] | undefined,
   } & (TParam extends NoTaskParams ? { executorParams?: NoTaskParams } : { executorParams: TParam })
   ) {
 
-    const mongoDatabase = await database.query.mongoDatabases.findFirst({ 
-        where: eq(mongoDatabases.id, mongoDatabaseId),
-        columns: {
-          id: true,
-          referenceName: true,
-          databaseName: true,
-          connectionUri: true
-        },
+    const taskMongoDatabases: MongoDatabase[] = [];
+
+    for(const db of databases)
+    {
+      const mongoDatabase = await database.query.mongoDatabases.findFirst({ where: eq(mongoDatabases.id, db.mongoDatabaseId) });
+
+      if(!mongoDatabase)
+      {
+        console.log(`🛑 '${taskType}' task rejected as an additional database was not found`);
+        return {
+          success: false,
+          message: `A database involved in the task was not found`
+        }
+      }
+
+      //todo refactor things so that instead of trying to 
+      //start a task immediately, we schedule the work to run 
+      //once the database is free?  For now, we just reject
+      //any new tasks if the database is busy
+      if(await isMongoDatabaseBusyWithTask(db.mongoDatabaseId))
+      {
+        console.log(`🛑 '${taskType}' task rejected as a required database is busy`);
+        return {
+          success: false,
+          message: "A database involved in the task is busy with another task."
+        }
+      }
+
+      taskMongoDatabases.push(mongoDatabase);
+    }
+    console.log(`🔄 Starting '${taskType}' task`);
+
+    const taskId = await database.transaction(async (tx) => {
+
+      const insertResult = await tx.insert(tasks).values([{
+        type: taskType,
+        progress: {
+          hasProgressValues: false,
+          message: initialTaskUpdate ?? "Initializing..."
+        }
+      }]).returning();
+
+      const taskId = insertResult[0].id;
+
+      const involvements: InsertMongoDatabaseTaskInvolvement[] = databases.map(({ mongoDatabaseId, involvementReason }) => ({
+        mongoDatabaseId,
+        taskId: taskId,
+        reason: involvementReason
+      }));
+
+      await tx.insert(mongoDatabaseTaskInvolvements).values(involvements).returning();
+
+      return taskId;
     });
-
-    if(!mongoDatabase) 
-    {
-      console.log(`🛑 '${taskType}' task rejected - as database was not found`);
-      return {
-        success: false,
-        message: `The database was not found`
-      }
-    }
-
-    //todo refactor things so that instead of trying to 
-    //start a task immediately, we schedule the work to run 
-    //once the database is free?  For now, we just reject
-    //any new tasks if the database is busy
-    if(await isMongoDatabaseBusyWithTask(mongoDatabaseId))
-    {
-      console.log(`🛑 '${taskType}' task rejected as the database is busy`);
-      return {
-        success: false,
-        message: "The database is busy running another task."
-      }
-    }
-
-    console.log(`🔄 Starting '${taskType}' task on '${mongoDatabase.referenceName}`);
-
-    const insertResponse = await database.insert(tasks).values([{
-      mongoDatabaseId: mongoDatabaseId,
-      type: taskType,
-      progress: {
-        hasProgressValues: false,
-        message: initialTaskUpdate ?? "Initializing..."
-      }
-    }]).returning();
-    const taskId = insertResponse[0].id;
 
     const taskRunner = new TaskRunner(taskId);
 
@@ -102,14 +119,14 @@ export class TaskRunner
 
       try 
       {
-        const executor = new executorType();
+        const executor = new executorClass();
         const result = await executor.execute(
           {
             reportProgress: taskRunner.queueProgressUpdate.bind(taskRunner),
             setCancellationType: taskRunner.setCancellationType.bind(taskRunner),
             throwIfCancelled: taskRunner.throwIfCancelled.bind(taskRunner)
           },
-          mongoDatabase,
+          taskMongoDatabases,
           executorParams as TParam
         );
 
@@ -132,7 +149,7 @@ export class TaskRunner
           console.error(e);
   
           await taskRunner.completeTask({
-            resolvedState: TaskState.Error,
+            resolvedState: TaskState.Failed,
             message: "Something went wrong while running the task, please check the server logs for more information"
           });
         }

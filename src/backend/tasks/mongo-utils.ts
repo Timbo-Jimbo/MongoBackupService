@@ -1,4 +1,4 @@
-import { MongoDatabaseAccess } from "@backend/db/mongodb-database.schema";
+import { MongoDatabaseAccess } from "@backend/db/mongo-database.schema";
 import { MongoClient } from "mongodb";
 import { exec } from "node:child_process";
 import { promisify } from "util";
@@ -145,7 +145,7 @@ export async function getCollectionMetadata(databaseAccess: MongoDatabaseAccess)
 const execPromise = promisify(exec);
 export enum BackupCompressionFormat
 {
-    SevenZip = '7z',
+    ZStandard = 'zst',
     Gzip = 'gz'
 }
 
@@ -162,8 +162,8 @@ export class Compression
         const availableTools: BackupCompressionFormat[] = [];
     
         try {
-            await execPromise('7z');
-            availableTools.push(BackupCompressionFormat.SevenZip);
+            await execPromise('zstd --version');
+            availableTools.push(BackupCompressionFormat.ZStandard);
         } catch (error) {}
     
         availableTools.push(BackupCompressionFormat.Gzip);
@@ -181,7 +181,7 @@ export class Compression
         }
         
         switch(extension) {
-            case '7z': return BackupCompressionFormat.SevenZip;
+            case 'zst': return BackupCompressionFormat.ZStandard;
             case 'gz': return BackupCompressionFormat.Gzip;
             default: throw new Error(`Unknown extension: ${extension}`);
         }

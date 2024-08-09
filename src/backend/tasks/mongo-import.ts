@@ -1,33 +1,29 @@
 import { TaskCommands, TaskExecutor, TaskExecuteResult, TaskCancelledError } from "./task-runner";
-import { MongoDatabaseAccess, mongoDatabases } from "@backend/db/mongodb-database.schema";
+import { MongoDatabaseAccess, mongoDatabases } from "@backend/db/mongo-database.schema";
 import { ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
 import { database } from "@backend/db";
 import { eq } from "drizzle-orm";
 import { ProcessCancelledError, runProcessesPiped } from "@lib/process";
 import { MongodumpOutputProgressExtractor, getCollectionMetadata } from "./mongo-utils";
 
-export class MongoImportExecutor implements TaskExecutor<{importFromMongoDatabaseId:number}> {
-    
-    async execute(commands: TaskCommands, mongoDatabaseAccess: MongoDatabaseAccess, {importFromMongoDatabaseId}: {importFromMongoDatabaseId:number}): Promise<TaskExecuteResult> {
+type TaskParams = {importFromMongoDatabaseId:number};
 
-      const databaseToImportFrom = await database.query.mongoDatabases.findFirst({ where: eq(mongoDatabases.id, importFromMongoDatabaseId) });
-      
-      if(!databaseToImportFrom) {
-          return {
-              resolvedState: ResolvedTaskState.Error,
-              message: "Database to import from not found",
-          };
-      }
+export class MongoImportExecutor implements TaskExecutor<TaskParams> {
+    
+    async execute(commands: TaskCommands, databases: MongoDatabaseAccess[], {importFromMongoDatabaseId}: TaskParams): Promise<TaskExecuteResult> {
+
+      const importingDatabase = databases[0];
+      const exportingDatabase = databases[1];
 
       await commands.setCancellationType(TaskCancellationType.SafeToCancel);
       commands.reportProgress({ hasProgressValues: false,  message: "Gathering info" });
-      const databaseImportFromCollectionMetadata = await getCollectionMetadata(databaseToImportFrom);
+      const databaseImportFromCollectionMetadata = await getCollectionMetadata(exportingDatabase);
 
       await commands.setCancellationType(TaskCancellationType.DangerousToCancel);
       commands.reportProgress({ hasProgressValues: false,  message: "Starting import..." });
 
       const progessExtractor = new MongodumpOutputProgressExtractor(
-        databaseToImportFrom,
+        exportingDatabase,
         databaseImportFromCollectionMetadata,
         (progress) => {
 
@@ -55,9 +51,9 @@ export class MongoImportExecutor implements TaskExecutor<{importFromMongoDatabas
         {
           command: 'mongodump',
           args: [
-            `--uri=${databaseToImportFrom.connectionUri}`,
+            `--uri=${exportingDatabase.connectionUri}`,
             '--authenticationDatabase=admin',
-            `--db=${databaseToImportFrom.databaseName}`,
+            `--db=${exportingDatabase.databaseName}`,
             '--archive'
           ],
           stderr: (data) => {
@@ -67,11 +63,11 @@ export class MongoImportExecutor implements TaskExecutor<{importFromMongoDatabas
         {
           command: 'mongorestore',
           args: [
-            `--uri=${mongoDatabaseAccess.connectionUri}`,
+            `--uri=${importingDatabase.connectionUri}`,
             '--authenticationDatabase=admin',
-            `--nsInclude=${databaseToImportFrom.databaseName}.*`,
-            `--nsFrom=${databaseToImportFrom.databaseName}.*`,
-            `--nsTo=${mongoDatabaseAccess.databaseName}.*`,
+            `--nsInclude=${exportingDatabase.databaseName}.*`,
+            `--nsFrom=${exportingDatabase.databaseName}.*`,
+            `--nsTo=${importingDatabase.databaseName}.*`,
             '--noIndexRestore',
             '--drop',
             '--archive'
@@ -82,7 +78,7 @@ export class MongoImportExecutor implements TaskExecutor<{importFromMongoDatabas
       });
       
       return { 
-        resolvedState: ResolvedTaskState.Sucessful, 
+        resolvedState: ResolvedTaskState.Completed, 
         message: "Imported successfully",
       };
 

@@ -5,7 +5,6 @@ import { getAllTasks } from "@actions/tasks";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { useTaskListQueryClient } from "@lib/providers/task-list-query-client";
 import { Separator } from "@radix-ui/react-separator";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fragment } from "react";
 
 export function TaskList() {

@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, unlinkSync, statSync } from "node:fs";
 import { v7 as uuidv7 } from "uuid";
 import { TaskCommands, TaskExecutor, TaskExecuteResult, TaskCancelledError, NoTaskParams as NoAdditionalParams } from "./task-runner";
-import { MongoDatabaseAccess } from "@backend/db/mongodb-database.schema";
+import { MongoDatabaseAccess } from "@backend/db/mongo-database.schema";
 import { runAndForget } from "@lib/utils";
 import { ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
 import { database } from "@backend/db";
@@ -13,10 +13,13 @@ export const MongoBackupFolder = "data/backups";
 
 export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams> {
     
-    async execute(commands: TaskCommands, mongoDatabaseAccess: MongoDatabaseAccess): Promise<TaskExecuteResult> {
+    async execute(commands: TaskCommands, databases: MongoDatabaseAccess[]): Promise<TaskExecuteResult> {
+
+        const targetDatabase = databases[0];
+
         mkdirSync(MongoBackupFolder, { recursive: true });
         const now = new Date();
-        const backupArchiveName = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${mongoDatabaseAccess.databaseName}-${uuidv7()}-backup`;
+        const backupArchiveName = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${targetDatabase.databaseName}-${uuidv7()}-backup`;
         let backupArchivePath = `${MongoBackupFolder}/${backupArchiveName}`;  
 
         try
@@ -24,13 +27,13 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
             await commands.setCancellationType(TaskCancellationType.SafeToCancel);
             
             commands.reportProgress({ hasProgressValues: false,  message: "Gathering info" });
-            const collectionMetadata = await getCollectionMetadata(mongoDatabaseAccess);
+            const collectionMetadata = await getCollectionMetadata(targetDatabase);
             await commands.throwIfCancelled();
 
             commands.reportProgress({ hasProgressValues: false,  message: "Initiating backup..." });
 
             const progessExtractor = new MongodumpOutputProgressExtractor(
-                mongoDatabaseAccess,
+                targetDatabase,
                 collectionMetadata,
                 (progress) => {
                     commands.reportProgress({ 
@@ -44,39 +47,45 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
             )
 
             const compressionFormatsAvailable = await Compression.determineAvailableFormats();
-            if(compressionFormatsAvailable.includes(BackupCompressionFormat.SevenZip))
-            {
-                console.log("Using 7zip compression");
-                backupArchivePath = `${backupArchivePath}.${BackupCompressionFormat.SevenZip}`;
+            const formatOfChoice = compressionFormatsAvailable[0] ?? BackupCompressionFormat.Gzip;
+            console.log(`Backing up using ${formatOfChoice} compression`);
+            backupArchivePath = `${backupArchivePath}.${formatOfChoice}`;
 
+            if(formatOfChoice == BackupCompressionFormat.ZStandard)
+            {
                 await runProcessesPiped([
                     {
                         command: 'mongodump',
                         args: [
-                            `--uri=${mongoDatabaseAccess.connectionUri}`,
+                            `--uri=${targetDatabase.connectionUri}`,
                             '--authenticationDatabase=admin',
-                            `--db=${mongoDatabaseAccess.databaseName}`,
+                            `--db=${targetDatabase.databaseName}`,
                             `--archive`,
                         ],
                         stderr: (data) => progessExtractor.processData(data),
                     },
                     {
-                        command: '7z',
-                        args: ['a', '-si', '-t7z', '-m0=lzma2', '-mx=9', '-mfb=64', '-md=32m', '-ms=on', backupArchivePath],
+                        command: 'zstd',
+                        args: [
+                            '-22',
+                            '--ultra',
+                            '--long=30',
+                            '-T0',
+                            '-',
+                            '-o',
+                            backupArchivePath,
+                        ]
                     }
                 ])
             }
-            else if(compressionFormatsAvailable.includes(BackupCompressionFormat.Gzip))
+            else if(formatOfChoice == BackupCompressionFormat.Gzip)
             {
-                console.log("Using gzip compression");
-                backupArchivePath = `${backupArchivePath}.${BackupCompressionFormat.Gzip}`;
-
                 await runProcess({
                     command: 'mongodump',
                     args: [
-                        `--uri=${mongoDatabaseAccess.connectionUri}`,
+                        `--uri=${targetDatabase.connectionUri}`,
                         '--authenticationDatabase=admin',
-                        `--db=${mongoDatabaseAccess.databaseName}`,
+                        `--db=${targetDatabase.databaseName}`,
                         `--archive=${backupArchivePath}`,
                         `--gzip`,
                     ],
@@ -84,18 +93,17 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
                 }, async () => {
                     await commands.throwIfCancelled();
                 });
-
             }
 
             await commands.setCancellationType(TaskCancellationType.NotCancellable);
             await commands.reportProgress({ hasProgressValues: false,  message: "Recording backup entry" });
             
             await database.insert(backups).values([{
-                mongoDatabaseId: mongoDatabaseAccess.id,
+                mongoDatabaseId: targetDatabase.id,
                 archivePath: backupArchivePath,
                 sizeBytes: statSync(backupArchivePath).size,
                 sourceMetadata: {
-                    databaseName: mongoDatabaseAccess.databaseName,
+                    databaseName: targetDatabase.databaseName,
                     collections: collectionMetadata.map(cw => ({
                         collectionName: cw.name,
                         documentCount: cw.totalCount,
@@ -104,7 +112,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
             }]);
         
             return { 
-                resolvedState: ResolvedTaskState.Sucessful, 
+                resolvedState: ResolvedTaskState.Completed, 
                 message: "Backup completed",
             };
         }

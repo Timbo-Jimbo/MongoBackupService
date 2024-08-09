@@ -32,9 +32,15 @@ export function MongoDatabaseList() {
         <Fragment key={result.mongoDatabase.id}>
           <MongoDatabaseCard 
             mongoDatabase={result.mongoDatabase}
-            otherDatabases={results.filter((r) => r.mongoDatabase.id !== result.mongoDatabase.id).map((r) => r.mongoDatabase)}
-            backups={result.backups}
+            ownBackups={result.backups}
             latestTask={result.latestTask}
+            otherDatabases={results
+              .filter((r) => r.mongoDatabase.id !== result.mongoDatabase.id)
+              .map((r) => ({
+                mongoDatabase: r.mongoDatabase,
+                backups: r.backups,
+              }))
+            }
           />
           {index < results.length - 1 && <Separator/>}
         </Fragment>

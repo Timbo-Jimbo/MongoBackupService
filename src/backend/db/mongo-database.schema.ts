@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { tasks } from "./task.schema";
 import { backups } from "./backup.schema";
+import { mongoDatabaseTaskInvolvements } from "./mongo-database-task-involvement.schema";
 
 export enum MongoDatabaseConnection {
     Online = "Online",
@@ -26,7 +27,7 @@ export const mongoDatabases = sqliteTable('mongo_databases', {
 });
 
 export const mongoDatabasesRelations = relations(mongoDatabases, ( { many }) => ({
-    tasks: many(tasks),
+    taskInvolvements: many(mongoDatabaseTaskInvolvements),
     backups: many(backups),
 }));
 

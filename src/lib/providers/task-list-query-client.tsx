@@ -2,10 +2,10 @@
 
 import { createContext, useContext } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Task, TaskState } from "@backend/db/task.schema";
+import { TaskWithInvolvements } from "@backend/db/task.schema";
 import { getAllTasks, getAllTasksForDatabase } from "@actions/tasks";
 
-type QueryListEntry = Task;
+type QueryListEntry = TaskWithInvolvements;
 
 const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
 
@@ -36,10 +36,10 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
         });
     }
 
-    const notifyTaskWasAdded = (task?: Task | undefined) => {
+    const notifyTaskWasAdded = (task?: TaskWithInvolvements | undefined) => {
         if(task){
 
-            if(mongoDatabaseId !== undefined && task.mongoDatabaseId !== mongoDatabaseId) 
+            if(mongoDatabaseId !== undefined && !task.involvements.some(i => i.mongoDatabaseId !== mongoDatabaseId)) 
                 return;
 
             queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
@@ -51,7 +51,7 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
         }
     }
 
-    const notifyTaskWasModified = (task: Task) => {
+    const notifyTaskWasModified = (task: TaskWithInvolvements) => {
         queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
             return entries.map(entry => entry.id === task.id ? task : entry);
         });

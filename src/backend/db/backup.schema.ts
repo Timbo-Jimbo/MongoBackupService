@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
 import { integer, sqliteTable, SQLiteUpdateSetSource, text } from "drizzle-orm/sqlite-core";
-import { mongoDatabases } from "./mongodb-database.schema";
+import { mongoDatabases } from "./mongo-database.schema";
 
 export type BackupSourceMetadata = {
     databaseName: string;
