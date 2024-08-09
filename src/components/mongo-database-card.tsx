@@ -148,7 +148,7 @@ export function MongoDatabaseCard({
   });
 
   return (
-    <div className="flex flex-col my-4 gap-4">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-row gap-2 place-items-center">
         <div className="flex flex-row gap-2 place-items-center">              
           <h1 className="text-lg font-semibold capitalize">{mongoDatabase.referenceName}</h1>

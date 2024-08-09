@@ -1,3 +1,4 @@
+import { transform } from "next/dist/build/swc"
 import type { Config } from "tailwindcss"
 
 const config = {
@@ -75,11 +76,16 @@ const config = {
           "0%, 100%": { opacity: "0.5" },
           "50%": { opacity: "1" },
         },
+        "hand-wave": {
+          "0%, 100%": { transform: "rotate(12deg)", transformOrigin: "50% 70%" },
+          "50%": { transform: "rotate(-12deg)", transformOrigin: "50% 70%" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-on-off": "pulse-on-off 0.75s ease-in-out infinite",
+        "hand-wave": "hand-wave 1s ease-in-out infinite",
       },
     },
   },

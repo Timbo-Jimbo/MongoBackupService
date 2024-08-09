@@ -26,6 +26,7 @@ const createMongoDatabaseListQueryClient = () => {
             if(!mongoDatabases) return [];
             const backupsPerDb = await Promise.all(mongoDatabases.map(db => getAllBackupsForDatabase(db.id)));
             const latestTasksPerDb = await Promise.all(mongoDatabases.map(db => tryGetLatestTask(db.id)));
+            
             return mongoDatabases.map((db, index) => {
                 return {
                     mongoDatabase: db,
@@ -38,7 +39,8 @@ const createMongoDatabaseListQueryClient = () => {
 
     const notifyDatabaseWasDeleted = (databaseId: number) => {
         queryClient.setQueryData(queryKey, (entries: QueryListEntry[]) => {
-            return entries.filter(entry => entry.mongoDatabase.id !== databaseId);
+            const newEntries = entries.filter(entry => entry.mongoDatabase.id !== databaseId);
+            return newEntries;
         });
     };
 
@@ -54,7 +56,8 @@ const createMongoDatabaseListQueryClient = () => {
             if(!newEntry) return;
 
             queryClient.setQueryData(queryKey, (entries: QueryListEntry[]) => {
-                return [...entries, newEntry];
+                const newEntries = [...entries, newEntry];
+                return newEntries;
             });
         }
     })

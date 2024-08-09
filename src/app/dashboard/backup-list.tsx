@@ -4,6 +4,9 @@ import { Separator } from "@comp/separator";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { BackupCard } from "@/components/backup-card";
 import { useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@comp/card";
+import { SkeletonList } from "@/components/skeleton-list";
 
 export function BackupList() {
 
@@ -13,23 +16,26 @@ export function BackupList() {
   const backups = backupListQueryClient.getAllQuery.data || [];
 
   return (
-    <div className="flex flex-col w-full gap-4">
-      <h2 className="text-xl font-semibold">Backups</h2>
-      {isReady && backups.length === 0 && <p className="opacity-50 text-sm">There are no Backups to show.</p>}
-      {!isReady && (
-        <div className="flex flex-col m-4 place-items-center justify-center">
-          <LoadingSpinner className="w-10 h-10 opacity-50" />
-        </div>
-      )}
-      {backups.map((backup, index, backups) => (
-        <div key={backup.id}>
-          <BackupCard 
-            key={backup.id}
-            backup={backup}
-          />
-          {index < backups.length - 1 && <Separator />}
-        </div>
-      ))}
-    </div>
+    <Card className="flex flex-col w-full">
+      <CardHeader>
+        <CardTitle className="text-xl font-bold">Backups</CardTitle>
+        <CardDescription>
+          View and manage your backups.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isReady && backups.length === 0 && <p className="opacity-50 text-sm"><InfoCircledIcon className="w-4 h-4 mr-2 inline" />There are no Backups to show.</p>}
+        {!isReady && <SkeletonList count={0} className="h-[4.5rem]"/>}
+        {backups.map((backup, index, backups) => (
+          <div key={backup.id}>
+            <BackupCard 
+              key={backup.id}
+              backup={backup}
+            />
+            {index < backups.length - 1 && <Separator className="my-4" />}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
