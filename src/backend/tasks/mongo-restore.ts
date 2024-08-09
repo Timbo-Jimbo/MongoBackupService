@@ -1,14 +1,12 @@
-import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { TaskCommands, TaskExecutor, TaskExecuteResult, TaskCancelledError } from "./task-runner";
+import { TaskCommands, TaskExecutor, TaskExecuteResult } from "./task-runner";
 import { MongoDatabaseAccess } from "@backend/db/mongo-database.schema";
 import { ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
 import { backups } from "@backend/db/backup.schema";
 import { database } from "@backend/db";
 import { eq } from "drizzle-orm";
-import { runAndForget } from "@lib/utils";
 import { runProcess, runProcessesPiped } from "@lib/process";
-import { BackupCompressionFormat, Compression } from "./mongo-utils";
+import { BackupCompressionFormat, Compression, MongorestoreOutputProgressExtractor } from "./mongo-utils";
 
 type TaskParams = {backupId:number};
 
@@ -52,6 +50,30 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
             await commands.setCancellationType(TaskCancellationType.DangerousToCancel);
             commands.reportProgress({ hasProgressValues: false,  message: "Restoring backup..." });
 
+            const progessExtractor = new MongorestoreOutputProgressExtractor(
+                backupToRestore.sourceMetadata.collections.map(c => ({name: c.collectionName, totalCount: c.documentCount})),
+                (progress) => {
+        
+                  if(progress.current >= progress.total)
+                  {
+                    commands.reportProgress({ 
+                      hasProgressValues: false,
+                      message: `Finishing up...`
+                    });
+                  }
+                  else
+                  {
+                    commands.reportProgress({ 
+                      hasProgressValues: true,
+                      countedThingName: "Documents",
+                      total: progress.total,
+                      current: progress.current,
+                      message: `Restoring documents`
+                    });
+                  }
+                }
+              )
+
             console.log(`Backups compression format is ${compressionFormat}`);
             if(compressionFormat === BackupCompressionFormat.ZStandard) {
                 await runProcessesPiped([
@@ -75,7 +97,10 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
                             `--nsInclude=${targetDatabase.databaseName}.*`,
                             "--drop",
                             "--archive"
-                        ]
+                        ],
+                        stderr: (data) => {
+                            progessExtractor.processData(data);
+                        }
                     }
                 ]);
             }
@@ -89,7 +114,10 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
                         "--drop",
                         "--gzip",
                         `--archive=${backupToRestore.archivePath}`,
-                    ]
+                    ],
+                    stderr: (data) => {
+                        progessExtractor.processData(data);
+                    }
                 });
             }
             else {
@@ -109,5 +137,4 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
             throw e;
         }
     }
-
 }

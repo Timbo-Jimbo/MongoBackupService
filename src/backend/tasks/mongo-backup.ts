@@ -36,13 +36,24 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
                 targetDatabase,
                 collectionMetadata,
                 (progress) => {
-                    commands.reportProgress({ 
-                        hasProgressValues: true,
-                        countedThingName: "Documents",
-                        total: progress.total,
-                        current: progress.current,
-                        message: `Backing up database`
-                    });
+
+                    if(progress.current >= progress.total)
+                    {
+                        commands.reportProgress({ 
+                            hasProgressValues: false,
+                            message: `Finishing up...`
+                        });
+                    }
+                    else
+                    {
+                        commands.reportProgress({ 
+                            hasProgressValues: true,
+                            countedThingName: "Documents",
+                            total: progress.total,
+                            current: progress.current,
+                            message: `Backing up database`
+                        });
+                    }
                 }
             )
 

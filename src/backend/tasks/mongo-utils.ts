@@ -9,7 +9,7 @@ export class MongodumpOutputProgressExtractor
 
     constructor(
         private readonly mongoDatabaseAccess: MongoDatabaseAccess,
-        private collectionMetadata: { name: string, totalCount: number }[],
+        collectionMetadata: { name: string, totalCount: number }[],
         private readonly onProgress: (progress: { current: number, total: number }) => void
     ) {
         collectionMetadata.forEach(c => this.perCollectionProgress.push({ name: c.name, backedUpCount: 0, totalCount: c.totalCount }));
@@ -31,7 +31,6 @@ export class MongodumpOutputProgressExtractor
 
             try
             {
-
                 const knownDatabaseName = this.mongoDatabaseAccess.databaseName;
 
                 let result: {
@@ -113,6 +112,63 @@ export class MongodumpOutputProgressExtractor
             });
         }
     }
+}
+
+export class MongorestoreOutputProgressExtractor 
+{
+    private perCollectionProgress: { name: string, restoredCount: number, totalCount: number }[] = [];
+
+    constructor(
+        private collectionMetadata: { name: string, totalCount: number }[],
+        private readonly onProgress: (progress: { current: number, total: number }) => void
+    ) {
+        this.collectionMetadata.forEach(c => {
+            this.perCollectionProgress.push({ name: c.name, restoredCount: 0, totalCount: c.totalCount });
+        });
+    }
+
+    processData(data: Buffer) {
+        const str = data.toString();
+        const lines = str.split("\n");
+        let anyProgressChange = false;
+
+        for (const line of lines) {
+            if (line.length === 0) continue;
+
+            try {
+                if(line.includes("finished restoring"))
+                {
+                    const lineParts = line.split(/\s+/).filter(part => part.length > 0);
+                    if(lineParts.length == 0) continue;
+                    const finishedDatabaseDotColName = lineParts[3];
+                    const finishedCollectionName = finishedDatabaseDotColName.split('.').pop();
+
+                    const entry = this.perCollectionProgress.find(c => c.name === finishedCollectionName);
+                    if(entry)
+                    {
+                        entry.restoredCount = entry.totalCount;
+                        anyProgressChange = true;
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to parse mongorestore output line (ignoring):", line);
+                console.error(e);
+            }
+        }
+
+        if (anyProgressChange) {
+            const totalDocs = this.perCollectionProgress.reduce((acc, c) => acc + c.totalCount, 0);
+            const backedUpDocs = this.perCollectionProgress.reduce((acc, c) => acc + c.restoredCount, 0);
+            const allDone = this.perCollectionProgress.every(c => c.restoredCount === c.totalCount);
+
+            this.onProgress({
+                current: backedUpDocs,
+                total: totalDocs,
+            });
+        }
+    }
+
+
 }
 
 export async function getCollectionMetadata(databaseAccess: MongoDatabaseAccess) {
