@@ -91,11 +91,11 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
 
                 if(backupFormat === BackupCompressionFormat.ZStandardFast)
                 {
-                    zstdArgs.unshift('--fast=3');
+                    zstdArgs.unshift('-5');
                 }
                 else if(backupFormat === BackupCompressionFormat.ZStandardBalanced)
                 {
-                    zstdArgs.unshift('-5');
+                    zstdArgs.unshift('-10');
                 }
                 else if(backupFormat === BackupCompressionFormat.ZStandardCompact)
                 {
