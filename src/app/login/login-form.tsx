@@ -27,7 +27,7 @@ export function LoginForm(
   }
 
   return (
-    <div className="flex flex-col gap-4  max-w-sm">
+    <div className="flex flex-col gap-4 w-full">
       <form onSubmit={onSubmit}>
         <Card>
           <CardHeader>
@@ -39,7 +39,7 @@ export function LoginForm(
 
           <CardContent className="grid gap-4">
             {loginErrorVisible && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="rounded-none sm:rounded-md">
                 <ExclamationTriangleIcon className="h-4 w-4" />
                 <AlertTitle>API Key Incorrect</AlertTitle>
                 <AlertDescription>

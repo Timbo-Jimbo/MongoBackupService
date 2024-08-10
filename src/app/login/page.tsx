@@ -24,9 +24,9 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col place-items-center justify-center p-24">
+    <main className="flex min-h-screen flex-col place-items-center justify-center">
       
-      <div className="flex flex-col place-items-center gap-4">
+      <div className="flex flex-col place-items-center gap-4 w-full sm:max-w-sm p-4">
         {loginPrompt && (
           <Alert variant={"destructive"}>
             <ExclamationTriangleIcon className="h-4 w-4" />
