@@ -77,7 +77,7 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
             console.log(`Backups compression format is ${backupToRestore.format}`);
             if(
                 backupToRestore.format === BackupCompressionFormat.ZStandardFast || 
-                backupToRestore.format === BackupCompressionFormat.ZStandardAdapative || 
+                backupToRestore.format === BackupCompressionFormat.ZStandardBalanced || 
                 backupToRestore.format === BackupCompressionFormat.ZStandardCompact
             ) {
                 await runProcessesPiped([

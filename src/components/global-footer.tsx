@@ -1,6 +1,3 @@
-import { LogoutButton } from "@app/login/components";
-import Image from "next/image";
-
 export function GlobalFooter () {
     return (
         <footer>

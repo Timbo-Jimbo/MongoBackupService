@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Progress } from "@comp/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comp/tabs";
 import { CommandLineIcon, ExclamationTriangleIcon, PlayIcon } from "@heroicons/react/20/solid";
+import { cn } from "@lib/utils";
 import { useState } from "react";
 
 type ProfilingData = {
@@ -102,11 +103,13 @@ export const DialogBackupModeSelect = ({
                 </DialogHeader>
                 <div className="flex flex-col">
                     <Tabs defaultValue={selectedMode} onValueChange={newValue => setSelectedMode(newValue as BackupMode)} autoFocus={false} className="flex flex-col gap-4">
-                        <TabsList className="w-full relative">
-                            <TabsTrigger value={BackupMode.Gzip} className={selectedMode === BackupMode.Gzip && "opacity-100" || "opacity-25"}>GZip</TabsTrigger>
-                            <TabsTrigger value={BackupMode.FasterBackup}>Faster</TabsTrigger>
-                            <TabsTrigger value={BackupMode.Balanced}>Balanced</TabsTrigger>
-                            <TabsTrigger value={BackupMode.SmallerBackup}>Smaller</TabsTrigger>
+                        <TabsList className="w-full relative h-12">
+                            <div className="inline-flex h-12 items-center justify-center p-1 absolute left-0 top-0 bg-none">
+                                <TabsTrigger value={BackupMode.Gzip} className={cn([selectedMode === BackupMode.Gzip && "opacity-100" || "opacity-50 ", "text-lg inline"])}>GZip</TabsTrigger>
+                            </div>
+                            <TabsTrigger value={BackupMode.FasterBackup} className="text-lg">Faster</TabsTrigger>
+                            <TabsTrigger value={BackupMode.Balanced} className="text-lg">Balanced</TabsTrigger>
+                            <TabsTrigger value={BackupMode.SmallerBackup} className="text-lg">Smaller</TabsTrigger>
                         </TabsList>
                         <div className="grid grid-cols-8 gap-4 justify-items-end items-center">
                             <span className="col-span-1">Speed</span>
@@ -115,24 +118,37 @@ export const DialogBackupModeSelect = ({
                             <Progress className="col-span-7" indicatorClassName="opacity-75" style={{ "backgroundColor": `hsl(${sizeHue}, ${saturation}%, ${luminance}%)` }} value={sizeRange.getPercentageRange(sizeOfSelectedMode) * 100} max={100} />
                         </div>
                         <TabsContent value={BackupMode.Gzip} className="text-sm text-muted-foreground place-items-center m-0">
-                            <div className="flex flex-row place-items-center justify-center">
-                                <ExclamationTriangleIcon className="w-4 h-4 mr-2" />
-                                For compatibility. Use one of the other options if you can!
+                            <div className="flex flex-col place-items-center justify-center">
+                                <p>
+                                <ExclamationTriangleIcon className="w-4 h-4 mr-1 inline-block" />
+                                <b>For compatibility</b>
+                                <ExclamationTriangleIcon className="w-4 h-4 ml-1 inline-block" />
+                                </p>
+                                <p>Use one of the other options if you can!</p>
                             </div>
                         </TabsContent>
                         <TabsContent value={BackupMode.FasterBackup} className="text-sm text-muted-foreground m-0">
                             <div className="flex flex-col place-items-center">
-                                In a hurry? This mode will be faster but the backup will be larger.
+                                <p>
+                                    <b>Backup, PRONTO!</b>
+                                </p>
+                                <p>Faster backups at the cost of disk space.</p>
                             </div>
                         </TabsContent>
                         <TabsContent value={BackupMode.Balanced} className="text-sm text-muted-foreground place-items-center m-0">
                             <div className="flex flex-col place-items-center">
-                                The best of both worlds. A good balance between speed and size.
+                                <p>
+                                    <b>I want it all!</b>
+                                </p>
+                                <p>Well, you can't have that. But this mode strikes a nice balance.</p>
                             </div>
                         </TabsContent>
                         <TabsContent value={BackupMode.SmallerBackup} className="text-sm text-muted-foreground place-items-center m-0">
                             <div className="flex flex-col place-items-center">
-                                Want to save space? This mode will be slower but the backup will be smaller.
+                                <p>
+                                    <b>"I'll probably never need this..."</b>
+                                </p>
+                                <p>Smallest size, but the backup will take a long time to create and restore.</p>
                             </div>
                         </TabsContent>
                     </Tabs>

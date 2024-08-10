@@ -78,7 +78,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
 
             if( 
                 backupFormat === BackupCompressionFormat.ZStandardFast || 
-                backupFormat === BackupCompressionFormat.ZStandardAdapative || 
+                backupFormat === BackupCompressionFormat.ZStandardBalanced || 
                 backupFormat === BackupCompressionFormat.ZStandardCompact 
             ) {
                 const zstdArgs = [
@@ -93,9 +93,9 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
                 {
                     zstdArgs.unshift('--fast=3');
                 }
-                else if(backupFormat === BackupCompressionFormat.ZStandardAdapative)
+                else if(backupFormat === BackupCompressionFormat.ZStandardBalanced)
                 {
-                    zstdArgs.unshift('--adapt');
+                    zstdArgs.unshift('-5');
                 }
                 else if(backupFormat === BackupCompressionFormat.ZStandardCompact)
                 {

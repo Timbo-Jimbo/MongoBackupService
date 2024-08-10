@@ -216,7 +216,7 @@ export class Compression
         try {
             await execPromise('zstd --version');
             availableTools.push(BackupCompressionFormat.ZStandardFast);
-            availableTools.push(BackupCompressionFormat.ZStandardAdapative);
+            availableTools.push(BackupCompressionFormat.ZStandardBalanced);
             availableTools.push(BackupCompressionFormat.ZStandardCompact);
         } catch (error) {}
     
@@ -236,7 +236,7 @@ export class Compression
         switch(mode) {
             case BackupMode.Gzip: return BackupCompressionFormat.Gzip;
             case BackupMode.FasterBackup: return BackupCompressionFormat.ZStandardFast;
-            case BackupMode.Balanced: return BackupCompressionFormat.ZStandardAdapative;
+            case BackupMode.Balanced: return BackupCompressionFormat.ZStandardBalanced;
             case BackupMode.SmallerBackup: return BackupCompressionFormat.ZStandardCompact
             default: throw new Error(`Unknown backup mode: ${mode}`);
         }
@@ -245,7 +245,7 @@ export class Compression
     static formatToExtension(format: BackupCompressionFormat): string {
         switch(format) {
             case BackupCompressionFormat.ZStandardCompact: return 'zst';
-            case BackupCompressionFormat.ZStandardAdapative: return 'zst';
+            case BackupCompressionFormat.ZStandardBalanced: return 'zst';
             case BackupCompressionFormat.ZStandardFast: return 'zst';
             case BackupCompressionFormat.Gzip: return 'gz';
             default: throw new Error(`Unknown format: ${format}`);
