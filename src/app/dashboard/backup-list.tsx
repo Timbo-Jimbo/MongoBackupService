@@ -24,7 +24,7 @@ export function BackupList() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isReady && backups.length === 0 && <p className="opacity-50 text-sm"><InfoCircledIcon className="w-4 h-4 mr-2 inline" />There are no Backups to show.</p>}
+        {isReady && backups.length === 0 && <p className="text-muted-foreground text-sm"><InfoCircledIcon className="w-4 h-4 mr-2 inline" />There are no Backups to show.</p>}
         {!isReady && <SkeletonList count={0} className="h-[4.5rem]"/>}
         {backups.map((backup, index, backups) => (
           <div key={backup.id}>

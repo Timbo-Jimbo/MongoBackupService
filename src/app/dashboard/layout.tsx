@@ -7,7 +7,7 @@ import { BackupListQueryClientProvider } from "@lib/providers/backup-list-query-
 import ClientQueryClientProvider from "@lib/providers/client-query-client";
 import { MongoDatabaseListQueryClientProvider } from "@lib/providers/mongo-database-list-query-client";
 import { TaskListQueryClientProvider } from "@lib/providers/task-list-query-client";
-import Image from "next/image";
+
 
 export default async function DashboardLayout({
   children,
@@ -23,8 +23,10 @@ export default async function DashboardLayout({
         <BackupListQueryClientProvider>
           <TaskListQueryClientProvider>
             <TooltipProvider>
-              <DashboardHeader/>
-              {children}
+              <div className="flex flex-col w-full h-full">
+                <DashboardHeader/>
+                {children}
+              </div>
             </TooltipProvider>
           </TaskListQueryClientProvider>
         </BackupListQueryClientProvider>

@@ -30,7 +30,7 @@ function Badges({
         <DurationDisplay startTime={backup.startedAt} endTime={backup.finishedAt} />
       </Badge>
       <Badge variant={"secondary"} className="capitalize">
-        {humanReadableEnumString(backup.mode)}<span className="opacity-50 ml-1">Backup</span>
+        {humanReadableEnumString(backup.mode)}<span className="opacity-50 ml-1">Mode</span>
       </Badge>
     </div>
   );
@@ -53,7 +53,7 @@ const TitleAndStat: React.FC<TitleAndStatPassInIconProps> = ({
     <div className={cn(["flex flex-row shrink-0", className])}>
       {Icon && <Icon className="w-10 h-10 mr-3" />}
       <div className="flex flex-col gap-0">
-        <span className="opacity-50 text-xs">{title}</span>
+        <span className="text-muted-foreground text-xs">{title}</span>
         {stat} 
       </div>
     </div>
@@ -90,7 +90,7 @@ export function BackupCard({
             <div className="flex flex-row gap-2 place-items-center w-full">
               <h1 className="text-lg font-semibold capitalize">{timeAgoString(backup.finishedAt)}</h1>
               <Badges className="hidden lg:inline-flex" backup={backup} />
-              <p className="grow text-sm opacity-50 text-right">{backup.finishedAt.toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})}</p>
+              <p className="grow text-sm text-muted-foreground text-right">{backup.finishedAt.toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})}</p>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant={"ghost"} size="icon">

@@ -118,7 +118,7 @@ export function TaskCard({
             <div className="flex flex-row gap-2 place-items-center w-full">
               <h1 className="text-lg font-semibold capitalize">{humanReadableEnumString(task.type)}</h1>
               <Badges className="hidden lg:inline-flex" task={task} />
-              <p className="grow text-sm opacity-50 text-right">{task.startedAt.toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})}</p>
+              <p className="grow text-sm text-muted-foreground text-right">{task.startedAt.toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})}</p>
               {!task.isComplete && (
                 <>
                   <DropdownMenu>
@@ -189,11 +189,11 @@ export function TaskCard({
           <div className="flex flex-row gap-2 place-items-center">
             {!task.isComplete && <LoadingSpinner className="w-5 h-5" />}
             <div className="flex flex-col gap-1 ">
-              {task.progress && <p className={"opacity-50"}>{task.progress.message}</p>}
+              {task.progress && <p className={"text-muted-foreground"}>{task.progress.message}</p>}
               {!task.isComplete && task.progress?.hasProgressValues && (
                 <p className="text-sm">
                   <AnimatedNumber endValue={task.progress.current} lerpFactor={0.01} />
-                  <span className="opacity-50 text-xs"> of {task.progress.total.toLocaleString()} {task.progress.countedThingName}</span>
+                  <span className="text-muted-foreground text-xs"> of {task.progress.total.toLocaleString()} {task.progress.countedThingName}</span>
                 </p>
               )}
             </div>

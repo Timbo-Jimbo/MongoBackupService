@@ -295,7 +295,7 @@ export function MongoDatabaseCard({
                           }}
                         >
                           <span className="font-semibold">{database.referenceName}</span>
-                          <span className="opacity-50">{database.databaseName}</span>
+                          <span className="text-muted-foreground">{database.databaseName}</span>
                         </DropdownMenuItem>    
                       ))}
                       {otherDatabases.length == 0 && (
@@ -352,7 +352,7 @@ export function MongoDatabaseCard({
       </div>
       <Badges className="inline-flex lg:hidden" ping={ping} mongoDatabase={mongoDatabase} latestTask={latestTask}/>
       <div className="flex flex-row gap-2 place-items-center">
-        <p className="text-sm opacity-50">{mongoDatabase.censoredConnectionUri}</p>
+        <p className="text-sm text-muted-foreground">{mongoDatabase.censoredConnectionUri}</p>
       </div>
     </div>
   );

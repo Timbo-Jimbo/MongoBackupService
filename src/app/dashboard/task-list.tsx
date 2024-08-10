@@ -36,7 +36,7 @@ export function TaskList() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isReady && tasks.length === 0 && <p className="opacity-50 text-sm"><InfoCircledIcon className="w-4 h-4 mr-2 inline" />There are no tasks to show.</p>}
+        {isReady && tasks.length === 0 && <p className="text-muted-foreground text-sm"><InfoCircledIcon className="w-4 h-4 mr-2 inline" />There are no tasks to show.</p>}
         {!isReady && <SkeletonList count={0} className="h-[4.5rem]"/>}
         {tasks.map((task, index, tasks) => (
           <Fragment key={task.id}>

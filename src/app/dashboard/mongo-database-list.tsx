@@ -38,7 +38,7 @@ export function MongoDatabaseList() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isReady && results.length == 0 && <p className="opacity-50 text-sm"><InfoCircledIcon className="w-4 h-4 mr-2 inline" />There are no Mongo Databases to show.</p>}
+        {isReady && results.length == 0 && <p className="text-muted-foreground text-sm"><InfoCircledIcon className="w-4 h-4 mr-2 inline" />There are no Mongo Databases to show.</p>}
         {!isReady && <SkeletonList count={0} className="h-[4.5rem]"/>}
         {results.map((result, index, results) => (
           <Fragment key={result.mongoDatabase.id}>

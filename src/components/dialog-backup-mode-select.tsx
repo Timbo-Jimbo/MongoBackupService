@@ -114,23 +114,23 @@ export const DialogBackupModeSelect = ({
                             <span className="col-span-1">Size</span>
                             <Progress className="col-span-7" indicatorClassName="opacity-75" style={{ "backgroundColor": `hsl(${sizeHue}, ${saturation}%, ${luminance}%)` }} value={sizeRange.getPercentageRange(sizeOfSelectedMode) * 100} max={100} />
                         </div>
-                        <TabsContent value={BackupMode.Gzip} className="text-sm opacity-50 place-items-center m-0">
+                        <TabsContent value={BackupMode.Gzip} className="text-sm text-muted-foreground place-items-center m-0">
                             <div className="flex flex-row place-items-center justify-center">
                                 <ExclamationTriangleIcon className="w-4 h-4 mr-2" />
                                 For compatibility. Use one of the other options if you can!
                             </div>
                         </TabsContent>
-                        <TabsContent value={BackupMode.FasterBackup} className="text-sm opacity-50 m-0">
+                        <TabsContent value={BackupMode.FasterBackup} className="text-sm text-muted-foreground m-0">
                             <div className="flex flex-col place-items-center">
                                 In a hurry? This mode will be faster but the backup will be larger.
                             </div>
                         </TabsContent>
-                        <TabsContent value={BackupMode.Balanced} className="text-sm opacity-50 place-items-center m-0">
+                        <TabsContent value={BackupMode.Balanced} className="text-sm text-muted-foreground place-items-center m-0">
                             <div className="flex flex-col place-items-center">
                                 The best of both worlds. A good balance between speed and size.
                             </div>
                         </TabsContent>
-                        <TabsContent value={BackupMode.SmallerBackup} className="text-sm opacity-50 place-items-center m-0">
+                        <TabsContent value={BackupMode.SmallerBackup} className="text-sm text-muted-foreground place-items-center m-0">
                             <div className="flex flex-col place-items-center">
                                 Want to save space? This mode will be slower but the backup will be smaller.
                             </div>

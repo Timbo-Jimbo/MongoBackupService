@@ -21,7 +21,7 @@ export function SkeletonList({
             ))}
             {count == 0 && (
             <div className="flex flex-col m-4 place-items-center justify-center">
-                <LoadingSpinner className="w-10 h-10 opacity-50" />
+                <LoadingSpinner className="w-10 h-10 text-muted-foreground" />
             </div>
             )}
       </>

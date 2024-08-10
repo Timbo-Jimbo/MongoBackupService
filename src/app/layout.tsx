@@ -6,6 +6,7 @@ import { AR_One_Sans as Font } from "next/font/google";
 import "./globals.css";
 import { Suspense } from "react";
 import { Toaster } from "@comp/sonner";
+import { GlobalFooter } from "@/components/global-footer";
 
 const font = Font({
   subsets: ["latin"],
@@ -25,12 +26,18 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={cn(
-        "min-h-screen bg-background antialiased",
+        "min-h-screen bg-black antialiased",
+        "bg-gradient-to-tr from-emerald-500/10 to-slate-800/40",
         font.className,
       )}>
           <LoginExtender>
             <Suspense>
-              {children}
+              <div className="flex flex-col min-h-screen">
+                <div className="flex flex-grow">
+                  {children}
+                </div>
+                <GlobalFooter />
+              </div>
             </Suspense>
             <Toaster position="top-right" />
           </LoginExtender>
