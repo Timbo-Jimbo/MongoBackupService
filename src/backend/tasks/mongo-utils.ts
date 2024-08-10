@@ -215,36 +215,39 @@ export class Compression
     
         try {
             await execPromise('zstd --version');
-            availableTools.push(BackupCompressionFormat.ZStandard);
+            availableTools.push(BackupCompressionFormat.ZStandardFast);
+            availableTools.push(BackupCompressionFormat.ZStandardAdapative);
+            availableTools.push(BackupCompressionFormat.ZStandardCompact);
         } catch (error) {}
     
         availableTools.push(BackupCompressionFormat.Gzip);
-        availableTools.push(BackupCompressionFormat.None);
     
         this.availableFormatsCache =  availableTools;
         return availableTools;
     }
 
     static async determineAvailableModes(): Promise<BackupMode[]> {
-        const allModes = [BackupMode.FasterBackup, BackupMode.Balanced, BackupMode.SmallerBackup];
+        const allModes = [BackupMode.Gzip, BackupMode.FasterBackup, BackupMode.Balanced, BackupMode.SmallerBackup];
         const availableFormats = await this.determineAvailableFormats();
         return allModes.filter(mode => availableFormats.includes(this.formatFromMode(mode)));
     }
 
     static formatFromMode(mode: BackupMode): BackupCompressionFormat {
         switch(mode) {
-            case BackupMode.FasterBackup: return BackupCompressionFormat.None;
-            case BackupMode.Balanced: return BackupCompressionFormat.Gzip;
-            case BackupMode.SmallerBackup: return BackupCompressionFormat.ZStandard
+            case BackupMode.Gzip: return BackupCompressionFormat.Gzip;
+            case BackupMode.FasterBackup: return BackupCompressionFormat.ZStandardFast;
+            case BackupMode.Balanced: return BackupCompressionFormat.ZStandardAdapative;
+            case BackupMode.SmallerBackup: return BackupCompressionFormat.ZStandardCompact
             default: throw new Error(`Unknown backup mode: ${mode}`);
         }
     }
 
     static formatToExtension(format: BackupCompressionFormat): string {
         switch(format) {
-            case BackupCompressionFormat.ZStandard: return 'zst';
+            case BackupCompressionFormat.ZStandardCompact: return 'zst';
+            case BackupCompressionFormat.ZStandardAdapative: return 'zst';
+            case BackupCompressionFormat.ZStandardFast: return 'zst';
             case BackupCompressionFormat.Gzip: return 'gz';
-            case BackupCompressionFormat.None: return 'bak';
             default: throw new Error(`Unknown format: ${format}`);
         }
     }

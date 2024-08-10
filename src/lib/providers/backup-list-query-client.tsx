@@ -3,7 +3,7 @@
 import { createContext, useContext, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Backup } from "@backend/db/backup.schema";
-import { getAllBackups, getAllBackupsForDatabase } from "@actions/backups";
+import { getAllBackups, getAllBackupsForDatabase, getAvailableBackupModes } from "@actions/backups";
 
 type QueryListEntry = Backup;
 
@@ -18,6 +18,13 @@ const createBackupListQueryClient = (mongoDatabaseId: number | undefined) => {
             const allBackups = await (mongoDatabaseId !== undefined ? getAllBackupsForDatabase(mongoDatabaseId) : getAllBackups());
             return allBackups ?? [];
         },
+    });
+
+    const availableBackupModesQuery = useQuery({
+        queryKey: ["backup-modes"],
+        queryFn: async () => {
+            return await getAvailableBackupModes();
+        }
     });
 
     const notifyBackupWasDeleted = (backupId: number) => {
@@ -36,6 +43,7 @@ const createBackupListQueryClient = (mongoDatabaseId: number | undefined) => {
     return {
         queryKey,
         getAllQuery,
+        availableBackupModesQuery,
         notifyBackupWasDeleted,
         notifyBackupsPotentiallyDirty
     }

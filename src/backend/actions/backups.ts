@@ -5,6 +5,7 @@ import { desc, eq } from "drizzle-orm";
 import { withAuthOrRedirect } from "./utils";
 import { backups } from "@backend/db/backup.schema";
 import { unlinkSync } from "node:fs";
+import { Compression } from "@backend/tasks/mongo-utils";
 
 export const getAllBackups = withAuthOrRedirect(async () => {
     return await database.query.backups.findMany({ orderBy: [desc(backups.id)] });
@@ -32,4 +33,8 @@ export const deleteBackup = withAuthOrRedirect(async (id: number) => {
             message: `Backup not found`
         };
     }
+});
+
+export const getAvailableBackupModes = withAuthOrRedirect(async () => {
+    return await Compression.determineAvailableModes();
 });

@@ -189,7 +189,7 @@ export function TaskCard({
           <div className="flex flex-row gap-2 place-items-center">
             {!task.isComplete && <LoadingSpinner className="w-5 h-5" />}
             <div className="flex flex-col gap-1 ">
-              {task.progress && <p>{task.progress.message}</p>}
+              {task.progress && <p className={"opacity-50"}>{task.progress.message}</p>}
               {!task.isComplete && task.progress?.hasProgressValues && (
                 <p className="text-sm">
                   <AnimatedNumber endValue={task.progress.current} lerpFactor={0.01} />
@@ -201,12 +201,12 @@ export function TaskCard({
         </div>
       </div>
       {!task.isComplete && task.progress?.hasProgressValues && (
-        <div className="flex flex-row flex-grow">
+        <div className="flex flex-row flex-grow" key={"progress"}>
           <Progress className="w-full duration-1000" value={(task.progress.current/task.progress.total) * 100} />
         </div>
       )}
       {!task.isComplete && !task.progress?.hasProgressValues && (
-        <div className="flex flex-row flex-grow">
+        <div className="flex flex-row flex-grow" key={"progress"}>
           <ProgressUncertain className="w-full"/>
         </div>
       )}

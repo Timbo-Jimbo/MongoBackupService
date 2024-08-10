@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, unlinkSync, statSync } from "node:fs";
 import { v7 as uuidv7 } from "uuid";
 import { TaskCommands, TaskExecutor, TaskExecuteResult } from "./task-runner";
 import { MongoDatabaseAccess } from "@backend/db/mongo-database.schema";
-import { ResolvedTaskState, TaskCancellationType, tasks } from "@backend/db/task.schema";
+import { ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
 import { database } from "@backend/db";
 import { backups } from "@backend/db/backup.schema";
 import { Compression, MongodumpOutputProgressExtractor, getCollectionMetadata } from "./mongo-utils";
@@ -76,8 +76,32 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
             console.log(`Backing up using ${backupFormat} compression`);
             backupArchivePath = `${backupArchivePath}.${Compression.formatToExtension(backupFormat)}`;
 
-            if(backupFormat == BackupCompressionFormat.ZStandard)
-            {
+            if( 
+                backupFormat === BackupCompressionFormat.ZStandardFast || 
+                backupFormat === BackupCompressionFormat.ZStandardAdapative || 
+                backupFormat === BackupCompressionFormat.ZStandardCompact 
+            ) {
+                const zstdArgs = [
+                    '--long',
+                    '-T0',
+                    '-',
+                    '-o',
+                    backupArchivePath,
+                ];
+
+                if(backupFormat === BackupCompressionFormat.ZStandardFast)
+                {
+                    zstdArgs.unshift('--fast=3');
+                }
+                else if(backupFormat === BackupCompressionFormat.ZStandardAdapative)
+                {
+                    zstdArgs.unshift('--adapt');
+                }
+                else if(backupFormat === BackupCompressionFormat.ZStandardCompact)
+                {
+                    zstdArgs.unshift('-19');
+                }
+
                 await runProcessesPiped([
                     {
                         command: 'mongodump',
@@ -91,18 +115,11 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
                     },
                     {
                         command: 'zstd',
-                        args: [
-                            '--adapt',
-                            '--long',
-                            '-T0',
-                            '-',
-                            '-o',
-                            backupArchivePath,
-                        ]
+                        args: zstdArgs
                     }
-                ])
+                ]);
             }
-            else if(backupFormat == BackupCompressionFormat.Gzip || backupFormat == BackupCompressionFormat.None)
+            else if(backupFormat === BackupCompressionFormat.Gzip)
             {
                 await runProcess({
                     command: 'mongodump',
@@ -111,7 +128,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
                         '--authenticationDatabase=admin',
                         `--db=${targetDatabase.databaseName}`,
                         `--archive=${backupArchivePath}`,
-                        (backupFormat == BackupCompressionFormat.Gzip) ? '--gzip' : '',
+                        `--gzip`,
                     ],
                     stderr: (data) => progessExtractor.processData(data),
                 }, async () => {

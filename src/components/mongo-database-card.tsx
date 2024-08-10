@@ -3,20 +3,22 @@ import { Backup } from "@backend/db/backup.schema";
 import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongo-database.schema";
 import { TaskWithInvolvements } from "@backend/db/task.schema";
 import { BackupMode } from "@backend/tasks/compression.enums";
-import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@comp/alert";
+import { AlertDialog, AlertDialogDescription, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
 import { Badge } from "@comp/badge";
 import { Button } from "@comp/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuPortal, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuLabel } from "@comp/dropdown-menu";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { toast, toastForActionResult } from "@comp/toasts";
-import { ArrowDownOnSquareIcon, ArrowPathIcon, Square3Stack3DIcon, TrashIcon } from "@heroicons/react/20/solid";
-import { tryUseBackupListQueryClient } from "@lib/providers/backup-list-query-client";
+import { ArrowDownOnSquareIcon, ArrowPathIcon, InformationCircleIcon, Square3Stack3DIcon, TrashIcon } from "@heroicons/react/20/solid";
+import { useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
 import { tryUseTaskListQueryClient } from "@lib/providers/task-list-query-client";
 import { cn, timeAgoString } from "@lib/utils";
-import { DotsVerticalIcon } from "@radix-ui/react-icons";
+import { Cross2Icon, DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
+import { DialogBackupModeSelect } from "./dialog-backup-mode-select";
 
 type Ping = {
   isPending: boolean,
@@ -112,9 +114,10 @@ export function MongoDatabaseCard({
 }: MongoDatabaseCardProps) {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [backupModeSelectDialogOpen, setBackupModeSelectDialogOpen] = useState(false);
   const mongoDatbaseListQueryClient = useMongoDatabaseListQueryClient();
   const taskListQueryClient = tryUseTaskListQueryClient();
-  const backupQueryClient = tryUseBackupListQueryClient();
+  const backupQueryClient = useBackupListQueryClient();
 
   const dbStatusQuery = useQuery({
     queryKey: [mongoDatbaseListQueryClient.queryKey, "status", mongoDatabase.id],
@@ -193,58 +196,10 @@ export function MongoDatabaseCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Square3Stack3DIcon className="w-4 h-4 mr-2" />
-                    Backup Now...
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuSubContent>
-                      <DropdownMenuItem onClick={() => {
-                          const toastId = toast.loading("Initiating backup...");
-                          startBackupMutation.mutate(BackupMode.FasterBackup, {
-                            onSettled: () => {
-                              toast.dismiss(toastId);
-                            }
-                          });
-                        }}
-                        disabled={startBackupMutation.isPending}
-                        className="flex-col items-start"
-                      >
-                        <span className="font-semibold">Faster</span>
-                        <span className="opacity-50">Faster backup but larger file size</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {
-                          const toastId = toast.loading("Initiating backup...");
-                          startBackupMutation.mutate(BackupMode.SmallerBackup, {
-                            onSettled: () => {
-                              toast.dismiss(toastId);
-                            }
-                          });
-                        }}
-                        disabled={startBackupMutation.isPending}
-                        className="flex-col items-start"
-                      >
-                        <span className="font-semibold">Smaller</span>
-                        <span className="opacity-50">Smaller file size but takes longer to complete</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {
-                          const toastId = toast.loading("Initiating backup...");
-                          startBackupMutation.mutate(BackupMode.Balanced, {
-                            onSettled: () => {
-                              toast.dismiss(toastId);
-                            }
-                          });
-                        }} 
-                        disabled={startBackupMutation.isPending} 
-                        className="flex-col items-start"
-                      >
-                        <span className="font-semibold">Balanced</span>
-                        <span className="opacity-50">Strikes a balance between speed and file size</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuPortal>
-                </DropdownMenuSub>
+                <DropdownMenuItem disabled={backupQueryClient.availableBackupModesQuery.isPending} onClick={() => setBackupModeSelectDialogOpen(true)}>
+                  <Square3Stack3DIcon className="w-4 h-4 mr-2" />
+                  Backup...
+                </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <ArrowPathIcon className="w-4 h-4 mr-2" />
@@ -353,17 +308,46 @@ export function MongoDatabaseCard({
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="bg-destructive text-destructive-foreground" disabled={deleteDatabaseMutation.isPending} onClick={() => setDeleteDialogOpen(true)}>
-                    <TrashIcon className="w-4 h-4 mr-2" />
-                    Delete
+                    <Cross2Icon className="w-4 h-4 mr-2" />
+                    Remove
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <AlertGenericConfirmationDialogContent 
-                body="Are you sure you want to delete this database?"
-                onConfirm={() => deleteDatabaseMutation.mutate()}
-              />
+              <AlertGenericConfirmationDialogContent onConfirm={() => deleteDatabaseMutation.mutate()}>
+                <div className="flex flex-col gap-4">
+                  <AlertDialogDescription>
+                    Are you sure you want to remove this database?
+                  </AlertDialogDescription>
+                  <AlertDialogDescription>
+                    <Alert>
+                      <InformationCircleIcon className="w-4 h-4 mr-2" />
+                      <AlertTitle>
+                        Your backups are retained
+                      </AlertTitle>
+                      <AlertDescription>
+                        This will <b>not</b> delete any backups associated with this database! They will become orphaned and you can delete them separately.
+                      </AlertDescription>
+                    </Alert>
+                  </AlertDialogDescription>
+                </div>
+              </AlertGenericConfirmationDialogContent>
             </AlertDialog>
+            <DialogBackupModeSelect 
+              open={backupModeSelectDialogOpen} 
+              onOpenChange={setBackupModeSelectDialogOpen} 
+              onBackupModeSelected={(mode) => {
+                const toastId = toast.loading("Initiating backup...");
+                startBackupMutation.mutate(mode, {
+                  onSettled: () => {
+                    toast.dismiss(toastId);
+                  }
+                });
+
+                setBackupModeSelectDialogOpen(false);
+              }}
+              supportedOptions={backupQueryClient?.availableBackupModesQuery.data ?? [BackupMode.Gzip]}
+            />
         </div>
       </div>
       <Badges className="inline-flex lg:hidden" ping={ping} mongoDatabase={mongoDatabase} latestTask={latestTask}/>

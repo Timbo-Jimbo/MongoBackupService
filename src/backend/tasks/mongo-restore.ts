@@ -75,7 +75,11 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
               )
 
             console.log(`Backups compression format is ${backupToRestore.format}`);
-            if(backupToRestore.format === BackupCompressionFormat.ZStandard) {
+            if(
+                backupToRestore.format === BackupCompressionFormat.ZStandardFast || 
+                backupToRestore.format === BackupCompressionFormat.ZStandardAdapative || 
+                backupToRestore.format === BackupCompressionFormat.ZStandardCompact
+            ) {
                 await runProcessesPiped([
                     {
                         command: 'zstd',
@@ -104,7 +108,7 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
                     }
                 ]);
             }
-            else if(backupToRestore.format === BackupCompressionFormat.Gzip || backupToRestore.format === BackupCompressionFormat.None) {
+            else if(backupToRestore.format === BackupCompressionFormat.Gzip) {
                 await runProcess({
                     command: "mongorestore",
                     args: [
@@ -112,7 +116,7 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
                         "--authenticationDatabase=admin",
                         `--nsInclude=${targetDatabase.databaseName}.*`,
                         "--drop",
-                        (backupToRestore.format === BackupCompressionFormat.Gzip ? `--gzip` : ''),
+                        "--gzip",
                         `--archive=${backupToRestore.archivePath}`,
                     ],
                     stderr: (data) => {

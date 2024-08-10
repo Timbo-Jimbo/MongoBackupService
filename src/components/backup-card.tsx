@@ -4,16 +4,17 @@ import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-
 import { Button } from "@comp/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@comp/dropdown-menu";
 import { toast, toastForActionResult } from "@comp/toasts";
-import { ChartPieIcon, ClockIcon, DocumentIcon, Square3Stack3DIcon, TableCellsIcon } from "@heroicons/react/20/solid";
+import { ChartPieIcon, ClockIcon, DocumentIcon, Square3Stack3DIcon, TableCellsIcon, TrashIcon } from "@heroicons/react/20/solid";
 import { useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
 import { cn, humanReadableEnumString, timeAgoString } from "@lib/utils";
-import { DotsVerticalIcon, TrashIcon } from "@radix-ui/react-icons";
+import { DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation } from "@tanstack/react-query";
 import prettyBytes from "pretty-bytes"
 import { useState } from "react";
 import { DurationDisplay } from "./time-since-display";
 import { Badge } from "@comp/badge";
+import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
 
 function Badges({
   backup,
@@ -29,12 +30,11 @@ function Badges({
         <DurationDisplay startTime={backup.startedAt} endTime={backup.finishedAt} />
       </Badge>
       <Badge variant={"secondary"} className="capitalize">
-        {humanReadableEnumString(backup.mode)}<span className="opacity-50 ml-1">Backup Mode</span>
+        {humanReadableEnumString(backup.mode)}<span className="opacity-50 ml-1">Backup</span>
       </Badge>
     </div>
   );
 }
-
 
 interface TitleAndStatPassInIconProps {
   Icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
@@ -106,7 +106,6 @@ export function BackupCard({
               </DropdownMenu>
               <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertGenericConfirmationDialogContent 
-                  body="Are you sure you want to delete this backup?"
                   onConfirm={() => {
                     const toastId = toast.loading("Deleting backup...");
                     deleteBackupMutation.mutate(undefined, {
@@ -115,7 +114,11 @@ export function BackupCard({
                       }
                     });
                   }}
-                />
+                >
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this backup?
+                  </AlertDialogDescription>
+                </AlertGenericConfirmationDialogContent>
               </AlertDialog>
             </div>
           </div>

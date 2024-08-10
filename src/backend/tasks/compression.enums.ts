@@ -1,12 +1,14 @@
 export enum BackupCompressionFormat
 {
-    None = 'None',
-    ZStandard = 'ZStandard',
-    Gzip = 'Gzip'
+    Gzip = 'gzip',
+    ZStandardFast = 'zstd-fast',
+    ZStandardAdapative = 'zstd-adaptive',
+    ZStandardCompact = 'zstd-compact',
 }
 
 export enum BackupMode 
 {
+    Gzip = 'gzip',
     FasterBackup = 'faster',
     Balanced = 'balanced',
     SmallerBackup = 'smaller'

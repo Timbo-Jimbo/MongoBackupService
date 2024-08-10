@@ -127,7 +127,6 @@ const AlertDialogCancel = React.forwardRef<
 AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName
 
 const AlertGenericConfirmationDialogContent = ({
-  body,
   title = "Confirmation",
   positiveButtonLabel = "Confirm",
   negativeButtonLabel = "Cancel",
@@ -135,7 +134,6 @@ const AlertGenericConfirmationDialogContent = ({
   onCancel,
   children
 }: {
-  body: string
   title?: string | undefined
   positiveButtonLabel?: string | undefined
   negativeButtonLabel?: string | undefined
@@ -148,7 +146,7 @@ const AlertGenericConfirmationDialogContent = ({
       <AlertDialogHeader>
         <AlertDialogTitle>{title}</AlertDialogTitle>
       </AlertDialogHeader>
-      <AlertDialogDescription>{body}</AlertDialogDescription>
+      {children}
       <AlertDialogFooter>
         <AlertDialogAction onClick={onConfirm}>
           {positiveButtonLabel}
