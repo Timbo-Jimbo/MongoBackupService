@@ -109,7 +109,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
                             `--uri=${targetDatabase.connectionUri}`,
                             '--authenticationDatabase=admin',
                             `--db=${targetDatabase.databaseName}`,
-                           `--numParallelCollections=8`,
+                           `--forceTableScan`,
                             `--archive`,
                         ],
                         stderr: (data) => progessExtractor.processData(data),
