@@ -7,7 +7,7 @@ import { Progress, ProgressUncertain } from "@comp/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@comp/tooltip";
 import { CheckCircleIcon, ClockIcon, ExclamationCircleIcon, ExclamationTriangleIcon, XCircleIcon } from "@heroicons/react/20/solid";
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { AnimatedNumber } from "./animated-number";
 import { useTaskListQueryClient } from "@lib/providers/task-list-query-client";
 import { tryUseMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
@@ -187,30 +187,29 @@ export function TaskCard({
           </div>
           <Badges className="inline-flex lg:hidden" task={task} />
           <div className="flex flex-row gap-2 place-items-center">
-            {!task.isComplete && <LoadingSpinner className="w-5 h-5" />}
-            <div className="flex flex-col gap-1 ">
-              {task.progress && <p className={"text-muted-foreground"}>{task.progress.message}</p>}
+            {!task.isComplete && <LoadingSpinner className="w-7 h-7 mr-2" />}
+            <div className="flex flex-col w-full gap-1">
+              {task.progress && <p className={(task.progress.hasProgressValues && "text-sm")}>{task.progress.message}</p>}
               {!task.isComplete && task.progress?.hasProgressValues && (
-                <p className="text-sm">
+                <div className="text-sm">
                   <AnimatedNumber endValue={task.progress.current} lerpFactor={0.01} />
-                  <span className="text-muted-foreground text-xs"> of {task.progress.total.toLocaleString()} {task.progress.countedThingName}</span>
-                </p>
+                  <span className="text-muted-foreground"> of {task.progress.total.toLocaleString()} {task.progress.countedThingName}</span>
+                </div>
               )}
             </div>
           </div>
+          { !task.isComplete && task.progress?.hasProgressValues && (
+            <div className="flex flex-row flex-grow w-full mt-2" key={"progress"}>
+              <Progress className="w-full duration-1000" value={(task.progress.current/task.progress.total) * 100} />
+            </div>
+          )}
+          {!task.isComplete && !task.progress?.hasProgressValues && (
+            <div className="flex flex-row flex-grow w-full mt-2" key={"progress"}>
+              <ProgressUncertain className="w-full"/>
+            </div>
+          )}
         </div>
       </div>
-      {!task.isComplete && task.progress?.hasProgressValues && (
-        <div className="flex flex-row flex-grow" key={"progress"}>
-          <Progress className="w-full duration-1000" value={(task.progress.current/task.progress.total) * 100} />
-        </div>
-      )}
-      {!task.isComplete && !task.progress?.hasProgressValues && (
-        <div className="flex flex-row flex-grow" key={"progress"}>
-          <ProgressUncertain className="w-full"/>
-        </div>
-      )}
-      
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import { cn } from "@lib/utils";
 import LoginExtender from "@/components/login-extender";
@@ -16,6 +16,10 @@ const font = Font({
 export const metadata: Metadata = {
   title: "Railway MongoDB Backups",
 };
+
+export const viewport: Viewport = {
+  themeColor: "#10B981",
+}
 
 export default function RootLayout({
   children,
