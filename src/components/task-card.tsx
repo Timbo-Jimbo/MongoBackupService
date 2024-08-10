@@ -18,7 +18,37 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@comp/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@comp/alert";
-import { humanReadableEnumString } from "@lib/utils";
+import { cn, humanReadableEnumString } from "@lib/utils";
+
+function Badges({
+  task,
+  className
+}: {
+  task: Task,
+  className?: string
+}) {
+  return (
+    <div className={cn(["flex flex-row gap-2 size-fit", className])}>
+      {!task.isComplete && (
+        <Badge variant={"outline"} className="animate-pulse" >
+          Running
+        </Badge>
+      )}
+      {task.isComplete && (
+        <Badge variant={task.state == TaskState.Completed ? "positive" : "destructive"} className="capitalize">
+          {task.state === TaskState.Cancelled && <XCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
+          {task.state === TaskState.Failed && <ExclamationCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
+          {task.state === TaskState.Completed && <CheckCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
+          {humanReadableEnumString(task.state)}
+        </Badge>
+      )}
+      <Badge variant={"secondary"}>
+        <ClockIcon className="w-4 h-4 mr-1 -ml-1" />
+        <DurationDisplay startTime={task.startedAt} endTime={() => task.completedAt ?? new Date()} />
+      </Badge>
+    </div>
+  );
+}
 
 export function TaskCard({
   task,
@@ -81,29 +111,13 @@ export function TaskCard({
   });
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
       <div className="flex flex-row flex-grow gap-2">
         <div className="flex flex-col gap-2 w-full">
           <div className="flex flex-row gap-2 place-items-center w-full">
             <div className="flex flex-row gap-2 place-items-center w-full">
               <h1 className="text-lg font-semibold capitalize">{humanReadableEnumString(task.type)}</h1>
-              {!task.isComplete && (
-                <Badge variant={"outline"} className="animate-pulse" >
-                  Running
-                </Badge>
-              )}
-              {task.isComplete && (
-                <Badge variant={task.state == TaskState.Completed ? "positive" : "destructive"} className="capitalize">
-                  {task.state === TaskState.Cancelled && <XCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
-                  {task.state === TaskState.Failed && <ExclamationCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
-                  {task.state === TaskState.Completed && <CheckCircleIcon className="w-4 h-4 mr-1 -ml-1" /> }
-                  {humanReadableEnumString(task.state)}
-                </Badge>
-              )}
-              <Badge variant={"secondary"}>
-                <ClockIcon className="w-4 h-4 mr-1 -ml-1" />
-                <DurationDisplay startTime={task.startedAt} endTime={() => task.completedAt ?? new Date()} />
-              </Badge>
+              <Badges className="hidden lg:inline-flex" task={task} />
               <p className="grow text-sm opacity-50 text-right">{task.startedAt.toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})}</p>
               {!task.isComplete && (
                 <>
@@ -171,6 +185,7 @@ export function TaskCard({
               )}
             </div>
           </div>
+          <Badges className="inline-flex lg:hidden" task={task} />
           <div className="flex flex-row gap-2 place-items-center">
             {!task.isComplete && <LoadingSpinner className="w-5 h-5" />}
             <div className="flex flex-col gap-1 ">

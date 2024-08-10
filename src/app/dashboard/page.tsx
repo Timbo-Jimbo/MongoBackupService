@@ -10,8 +10,8 @@ import { Card, CardContent } from "@comp/card";
 export default function DashboardPage() {
 
   return (
-    <main className="flex flex-col place-items-center justify-center px-24 py-12">
-      <div className="flex flex-col place-items-center gap-8 w-full max-w-3xl">
+    <main className="flex flex-col place-items-center justify-center px-4 lg:py-12">
+      <div className="flex flex-col place-items-center gap-8 w-full max-w-screen-lg">
         <MongoDatabaseList/>
         <BackupList/>
         <TaskList/>

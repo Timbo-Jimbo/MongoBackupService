@@ -1,7 +1,7 @@
 import { deleteMongoDatabase, getMongoDatabaseConnectionStatus, startImport, startManualBackup, startRestore } from "@actions/mongo";
 import { Backup } from "@backend/db/backup.schema";
 import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongo-database.schema";
-import { TaskWithInvolvements } from "@backend/db/task.schema";
+import { Task, TaskWithInvolvements } from "@backend/db/task.schema";
 import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
 import { Badge } from "@comp/badge";
 import { Button } from "@comp/button";
@@ -17,44 +17,36 @@ import { DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 
-type OtherDatabase = {
-  mongoDatabase: MongoDatabaseCensored,
-  backups: Backup[],
-}
-
-type MongoDatabaseCardProps = {
-  mongoDatabase: MongoDatabaseCensored,
-  ownBackups: Backup[],
-  latestTask?: TaskWithInvolvements
-  otherDatabases: OtherDatabase[],
+type Ping = {
+  isPending: boolean,
+  isFetching: boolean,
+  result: MongoDatabaseConnection | undefined
 };
 
-function ConnectionBadge({isPending, isFetching, data}: {isPending: boolean, isFetching: boolean, data: {connectionStatus: MongoDatabaseConnection} | undefined}) {
+function ConnectionBadge({ping}: {ping: Ping}) {
 
   return (
     <>
-      {isPending && (
-        <Badge variant={"outline"} className="animate-pulse" >
-          <SignalIcon className="w-4 h-4 mr-2" />
+      {ping.isPending && (
+        <Badge variant={"outline"} className="animate-pulse" key={"connection-badge"}>
+          <div className="w-2 h-2 -ml-1 mr-2 bg-stone-500 rounded-full transition-all duration-500">
+            <div className="size-full bg-stone-300 rounded-full animate-ping"></div>
+          </div>
           Pinging
         </Badge>
       )}
-      {data && data.connectionStatus == MongoDatabaseConnection.Online && (
-        <Badge variant={"secondary"} >
-          <SignalIcon className={cn([
-            "w-4 h-4 mr-2 -ml-1 text-green-500",
-            (isFetching && "animate-pulse")
-          ])} />
+      {ping.result && ping.result == MongoDatabaseConnection.Online && (
+        <Badge variant={"secondary"} className="transition-all duration-500" key={"connection-badge"}>
+          <div className="w-2 h-2 -ml-1 mr-2 bg-green-500 rounded-full transition-all duration-500" />
           Online
         </Badge>
       )}
-      {data && data.connectionStatus != MongoDatabaseConnection.Online && (
-        <Badge variant={"secondary"}>
-          <SignalSlashIcon className={cn([
-            "w-4 h-4 mr-2 -ml-1 text-red-500",
-            (isFetching && "animate-pulse")
-          ])} />
-          {data?.connectionStatus}
+      {ping.result && ping.result != MongoDatabaseConnection.Online && (
+        <Badge variant={"secondary"} className="transition-all duration-500" key={"connection-badge"}>
+          <div className="w-2 h-2 -ml-1 mr-2 bg-red-500 rounded-full transition-all duration-500">
+            <div className="size-full bg-rose-300 rounded-full animate-ping"></div>
+          </div>
+          {ping.result}
         </Badge>
       )}
     </>
@@ -79,6 +71,37 @@ function WorkBadge({
     </>
   )
 }
+
+function Badges({
+  mongoDatabase,
+  latestTask,
+  ping,
+  className
+}: {
+  mongoDatabase: MongoDatabaseCensored,
+  latestTask: TaskWithInvolvements | undefined
+  ping: Ping,
+  className?: string
+}) {
+  return (
+    <div className={cn(["flex flex-row gap-2", className])}>
+      <ConnectionBadge ping={ping}/>
+      <WorkBadge mongoDatabaseId={mongoDatabase.id} task={latestTask}/>
+    </div>
+  )
+}
+
+type OtherDatabase = {
+  mongoDatabase: MongoDatabaseCensored,
+  backups: Backup[],
+}
+
+type MongoDatabaseCardProps = {
+  mongoDatabase: MongoDatabaseCensored,
+  ownBackups: Backup[],
+  latestTask?: TaskWithInvolvements
+  otherDatabases: OtherDatabase[],
+};
 
 export function MongoDatabaseCard({
   mongoDatabase,
@@ -130,6 +153,7 @@ export function MongoDatabaseCard({
 
       if(!result?.success) return;
       taskListQueryClient?.notifyTaskWasAdded();
+      mongoDatbaseListQueryClient.notifyDatabasesPotentiallyDirty();
     }
   });
 
@@ -146,14 +170,19 @@ export function MongoDatabaseCard({
       taskListQueryClient?.notifyTasksPotentiallyDirty();
     }
   });
+  
+  const ping = {
+    isFetching: dbStatusQuery.isFetching,
+    isPending: dbStatusQuery.isPending,
+    result: dbStatusQuery.data?.connectionStatus 
+  } as Ping;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
       <div className="flex flex-row gap-2 place-items-center">
         <div className="flex flex-row gap-2 place-items-center">              
           <h1 className="text-lg font-semibold capitalize">{mongoDatabase.referenceName}</h1>
-          <ConnectionBadge isPending={dbStatusQuery.isPending} isFetching={dbStatusQuery.isFetching} data={dbStatusQuery.data} />
-          <WorkBadge mongoDatabaseId={mongoDatabase.id} task={latestTask}/>
+          <Badges className="hidden lg:inline-flex" ping={ping} mongoDatabase={mongoDatabase} latestTask={latestTask}/>
         </div>
         <div className="flex flex-row flex-grow gap-2 justify-end place-items-center">
             <DropdownMenu>
@@ -295,6 +324,7 @@ export function MongoDatabaseCard({
             </AlertDialog>
         </div>
       </div>
+      <Badges className="inline-flex lg:hidden" ping={ping} mongoDatabase={mongoDatabase} latestTask={latestTask}/>
       <div className="flex flex-row gap-2 place-items-center">
         <p className="text-sm opacity-50">{mongoDatabase.censoredConnectionUri}</p>
       </div>

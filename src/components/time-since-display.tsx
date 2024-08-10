@@ -6,7 +6,7 @@ const DurationDisplay = ({ startTime, endTime }:{ startTime: Date | (() => Date)
     const getHumanizedString = () => {
       const resolvedStartTime = typeof startTime === 'function' ? startTime() : startTime;
       const resolvedEndTime = typeof endTime === 'function' ? endTime() : endTime;
-      return humanizeDuration(resolvedStartTime.getTime() - resolvedEndTime.getTime(), { round: true })
+      return humanizeDuration(resolvedStartTime.getTime() - resolvedEndTime.getTime(), { round: true, largest: 2 });
     }
 
     const [currentValue, setValue] = useState(getHumanizedString());

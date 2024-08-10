@@ -6,7 +6,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast, toastForActionResult } from "@comp/toasts";
 import { ChartPieIcon, DocumentIcon, Square3Stack3DIcon, TableCellsIcon } from "@heroicons/react/20/solid";
 import { useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
-import { timeAgoString } from "@lib/utils";
+import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
+import { cn, timeAgoString } from "@lib/utils";
 import { DotsVerticalIcon, TrashIcon } from "@radix-ui/react-icons";
 import { useMutation } from "@tanstack/react-query";
 import prettyBytes from "pretty-bytes"
@@ -16,15 +17,17 @@ interface TitleAndStatPassInIconProps {
   Icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   title: string;
   stat: string;
+  className?: string;
 }
 
 const TitleAndStat: React.FC<TitleAndStatPassInIconProps> = ({
   title,
   stat,
-  Icon
+  Icon,
+  className
 }) => {
   return (
-    <div className="flex flex-row place-items-center">
+    <div className={cn(["flex flex-row shrink-0", className])}>
       {Icon && <Icon className="w-10 h-10 mr-3" />}
       <div className="flex flex-col gap-0">
         <span className="opacity-50 text-xs">{title}</span>
@@ -41,6 +44,7 @@ export function BackupCard({
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const backupListQueryClient = useBackupListQueryClient(); 
+  const mongoDatabaseListQueryClient = useMongoDatabaseListQueryClient();
 
   const deleteBackupMutation = useMutation({
     mutationFn: async () => await deleteBackup(backup.id),
@@ -51,11 +55,12 @@ export function BackupCard({
       if(!result?.success) return;
 
       backupListQueryClient.notifyBackupWasDeleted(backup.id);
+      mongoDatabaseListQueryClient.notifyDatabasesPotentiallyDirty();
     }
   });
   
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
       <div className="flex flex-row flex-grow gap-2">
         <div className="flex flex-col gap-2 w-full">
           <div className="flex flex-row gap-2 place-items-center w-full">
@@ -90,13 +95,11 @@ export function BackupCard({
               </AlertDialog>
             </div>
           </div>
-          <div className="flex flex-row gap-2 place-items-center my-4">
-            <div className="flex flex-row w-full place-content-between ">
-              <TitleAndStat title="Database Name" stat={backup.sourceMetadata.databaseName} Icon={Square3Stack3DIcon} />
-              <TitleAndStat title="Documents" stat={backup.sourceMetadata.collections.reduce((acc, c) => acc + c.documentCount, 0).toLocaleString()} Icon={DocumentIcon} />
-              <TitleAndStat title="Collections" stat={backup.sourceMetadata.collections.length.toLocaleString()} Icon={TableCellsIcon} />
-              <TitleAndStat title="Size" stat={prettyBytes(backup.sizeBytes)} Icon={ChartPieIcon} />
-            </div>
+          <div className="w-full gap-4 py-4 grid grid-cols-2 lg:flex lg:flex-row lg:place-content-between">
+            <TitleAndStat title="Database Name" stat={backup.sourceMetadata.databaseName} Icon={Square3Stack3DIcon} />
+            <TitleAndStat title="Documents" stat={backup.sourceMetadata.collections.reduce((acc, c) => acc + c.documentCount, 0).toLocaleString()} Icon={DocumentIcon} />
+            <TitleAndStat title="Collections" stat={backup.sourceMetadata.collections.length.toLocaleString()} Icon={TableCellsIcon} />
+            <TitleAndStat title="Size" stat={prettyBytes(backup.sizeBytes)} Icon={ChartPieIcon} />
           </div>
         </div>
       </div>

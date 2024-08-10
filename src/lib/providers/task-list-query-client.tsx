@@ -1,9 +1,10 @@
 "use client"
 
 import { createContext, useContext } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { TaskWithInvolvements } from "@backend/db/task.schema";
-import { getAllTasks, getAllTasksForDatabase } from "@actions/tasks";
+import { deleteAllCompletedTasks, getAllTasks, getAllTasksForDatabase } from "@actions/tasks";
+import { toastForActionResult } from "@comp/toasts";
 
 type QueryListEntry = TaskWithInvolvements;
 
@@ -22,6 +23,19 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
           return !query.state.data || query.state.data.some(t => !t.isComplete) ? 500 : false;
         },
     });
+
+    const clearAllCompletedTasksMutation = useMutation({
+        mutationFn: async () => { return await deleteAllCompletedTasks(); },
+        onSuccess: (result) => {
+            toastForActionResult(result);
+
+            if(result?.success){
+                queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
+                    return entries.filter(entry => !result.clearedTaskIds.includes(entry.id));
+                });
+            }
+        }
+    })
 
     const notifyTaskWasDeleted = (taskId: number) => {
         queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
@@ -64,6 +78,7 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
         notifyTaskWasDeleted,
         notifyTaskWasModified,
         notifyTasksPotentiallyDirty,
+        clearAllCompletedTasksMutation,
     }
 }
 

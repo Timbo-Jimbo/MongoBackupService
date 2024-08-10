@@ -82,7 +82,7 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
                         args: [
                             '-d', 
                             '-c',
-                            '--long=30',
+                            '--long',
                             backupToRestore.archivePath
                         ],
                         stderr: (data) => {

@@ -2,9 +2,8 @@
 
 import { SkeletonList } from "@/components/skeleton-list";
 import { TaskCard } from "@/components/task-card";
-import { getAllTasks } from "@actions/tasks";
+import { Button, ButtonWithSpinner } from "@comp/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@comp/card";
-import { LoadingSpinner } from "@comp/loading-spinner";
 import { useTaskListQueryClient } from "@lib/providers/task-list-query-client";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { Separator } from "@radix-ui/react-separator";
@@ -18,9 +17,20 @@ export function TaskList() {
   const tasks = taskListQueryClient.getAllQuery.data || [];
 
   return (
-    <Card className="flex flex-col w-full">
+    <Card className="flex flex-col w-full border-0 lg:border">
       <CardHeader>
-        <CardTitle className="text-xl font-bold">Tasks</CardTitle>
+        <CardTitle className="text-xl font-bold flex justify-between items-center">
+          <span>Tasks</span>
+          {tasks.filter(t => t.isComplete).length > 1 && (
+            <ButtonWithSpinner 
+              variant={"ghost"} 
+              onClick={() => taskListQueryClient.clearAllCompletedTasksMutation.mutate()} 
+              isLoading={taskListQueryClient.clearAllCompletedTasksMutation.isPending}
+            >
+              Clear History
+            </ButtonWithSpinner>
+          )}
+        </CardTitle>
         <CardDescription>
           Manage running tasks and view task history.
         </CardDescription>

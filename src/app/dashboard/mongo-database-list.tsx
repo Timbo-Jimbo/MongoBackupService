@@ -22,13 +22,19 @@ export function MongoDatabaseList() {
     
   const isReady = mongoDatbaseListQueryClient.getAllQuery.isFetched;
   const results = mongoDatbaseListQueryClient.getAllQuery.data || [];
-
+  
   return (
-    <Card className="flex flex-col w-full">
+    <Card className="flex flex-col w-full border-0 lg:border">
       <CardHeader>
-        <CardTitle className="text-xl font-bold">Mongo Databases</CardTitle>
+        <CardTitle className="text-xl font-bold flex justify-between items-center">
+          <span>Mongo Databases</span>
+          <ButtonWithSpinner className="relative" variant={"ghost"} isLoading={mongoDatbaseListQueryClient.addDatabaseMutation.isPending} onClick={() => setAddFormOpen(true)}>
+            <PlusIcon className="w-5 h-5 mr-2"/>
+            Register Mongo Database
+          </ButtonWithSpinner>
+        </CardTitle>
         <CardDescription>
-          Add and manage your Mongo databases.
+          Register and manage your Mongo databases.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -52,91 +58,82 @@ export function MongoDatabaseList() {
           </Fragment>
         ))}
       </CardContent>
-      <CardFooter className="flex flex-col gap-4">
-        {isReady && results.length == 0 && (
+      {isReady && results.length == 0 && (
+        <CardContent>
           <Alert>
             <HandRaisedIcon className="w-5 h-5 mr-2 animate-hand-wave" />
             <AlertTitle>Hey there!</AlertTitle>
-            <AlertDescription>Get started by registering your first database bellow.</AlertDescription>
+            <AlertDescription>Get started by registering your first database using the 'Register Mongo Database' button over to the top right!</AlertDescription>
           </Alert>
-        )}
-        <Dialog open={addFormOpen} onOpenChange={setAddFormOpen}>
-          <DialogTrigger asChild>
-            <ButtonWithSpinner className="w-full">
-              <PlusIcon className="w-5 h-5 mr-2"/>
-              Add Mongo Database
-            </ButtonWithSpinner>
-          </DialogTrigger>
-          <DialogContent className="max-w-xl">
-            <DialogHeader>
-              <DialogTitle>Add Mongo Database</DialogTitle>
-              <DialogDescription>
-                This represents a single database within a MongoDB instance.
-              </DialogDescription>
-              <DialogDescription>
-                Once added, you can schedule and restore backups as well as seed it from database another.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={(e: FormEvent<HTMLFormElement>) => {
-              e.preventDefault();
+        </CardContent>
+      )}
+      <Dialog open={addFormOpen} onOpenChange={setAddFormOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Register Mongo Database</DialogTitle>
+            <DialogDescription>
+              This represents a single database within a MongoDB instance.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e: FormEvent<HTMLFormElement>) => {
+            e.preventDefault();
 
-              const formData = new FormData(e.currentTarget);
+            const formData = new FormData(e.currentTarget);
 
-              const toastId = toast.loading("Adding database...");
+            const toastId = toast.loading("Adding database...");
 
-              mongoDatbaseListQueryClient.addDatabaseMutation.mutate({
-                referenceName: formData.get("reference-name") as string,
-                connectionUri: formData.get("mongo-connection-uri") as string,
-                databaseName: formData.get("database-name") as string,
-              }, {
-                onSettled: () => {
-                  toast.dismiss(toastId);
-                }
-              });
+            mongoDatbaseListQueryClient.addDatabaseMutation.mutate({
+              referenceName: formData.get("reference-name") as string,
+              connectionUri: formData.get("mongo-connection-uri") as string,
+              databaseName: formData.get("database-name") as string,
+            }, {
+              onSettled: () => {
+                toast.dismiss(toastId);
+              }
+            });
 
-              setAddFormOpen(false);
-            }}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="reference-name" className="text-right">
-                    Reference Name
-                  </Label>
-                  <Input
-                    name="reference-name"
-                    placeholder="My Database"
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="mongo-connection-uri" className="text-right">
-                    Connection URI
-                  </Label>
-                  <Input
-                    name="mongo-connection-uri"
-                    placeholder="mongodb://user:password@host:port"
-                    className="col-span-3"
-                    autoComplete="off"
-                    type="string"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="database-name" className="text-right">
-                    Database Name
-                  </Label>
-                  <Input
-                    name="database-name"
-                    placeholder="my-database"
-                    className="col-span-3"
-                  />
-                </div>
+            setAddFormOpen(false);
+          }}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="reference-name" className="text-right">
+                  Reference Name
+                </Label>
+                <Input
+                  name="reference-name"
+                  placeholder="My Database"
+                  className="col-span-3"
+                />
               </div>
-              <DialogFooter>
-                <ButtonWithSpinner type="submit" isLoading={mongoDatbaseListQueryClient.addDatabaseMutation.isPending}>Add</ButtonWithSpinner>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </CardFooter>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="mongo-connection-uri" className="text-right">
+                  Connection URI
+                </Label>
+                <Input
+                  name="mongo-connection-uri"
+                  placeholder="mongodb://user:password@host:port"
+                  className="col-span-3"
+                  autoComplete="off"
+                  type="string"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="database-name" className="text-right">
+                  Database Name
+                </Label>
+                <Input
+                  name="database-name"
+                  placeholder="my-database"
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <ButtonWithSpinner type="submit" isLoading={mongoDatbaseListQueryClient.addDatabaseMutation.isPending}>Add</ButtonWithSpinner>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

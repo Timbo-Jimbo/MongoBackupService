@@ -7,8 +7,8 @@ export function DashboardHeader () {
             <div className="flex items-center justify-between p-4">
                 <div className="flex items-center space-x-4">
                     <Image src="/logo.svg" alt="MongoDB Logo" width={32} height={32} />
-                    <div className="text-xl font-bold">Railway MongoDB Backups</div>
-                    <div className="text-sm opacity-50">v0.1.0</div>
+                    <div className="text-xl font-bold hidden sm:inline-flex">Railway MongoDB Backups</div>
+                    <div className="text-sm opacity-50  hidden sm:inline-flex">v0.1.0</div>
                 </div>
                 <LogoutButton />
             </div>

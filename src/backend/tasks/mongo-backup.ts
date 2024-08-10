@@ -78,9 +78,8 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
                     {
                         command: 'zstd',
                         args: [
-                            '-22',
-                            '--ultra',
-                            '--long=30',
+                            '--adapt',
+                            '--long',
                             '-T0',
                             '-',
                             '-o',

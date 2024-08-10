@@ -16,7 +16,7 @@ export function BackupList() {
   const backups = backupListQueryClient.getAllQuery.data || [];
 
   return (
-    <Card className="flex flex-col w-full">
+    <Card className="flex flex-col w-full border-0 lg:border">
       <CardHeader>
         <CardTitle className="text-xl font-bold">Backups</CardTitle>
         <CardDescription>
