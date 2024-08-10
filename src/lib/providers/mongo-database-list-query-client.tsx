@@ -7,6 +7,7 @@ import { getAllMongoDatabases, addMongoDatabase, tryGetLatestTask } from "@actio
 import { Backup } from "@backend/db/backup.schema";
 import { MongoDatabaseCensored, InsertMongoDatabase } from "@backend/db/mongo-database.schema";
 import { TaskWithInvolvements } from "@backend/db/task.schema";
+import useLocalStorageState from "use-local-storage-state"
 
 type QueryListEntry = {
     mongoDatabase: MongoDatabaseCensored,
@@ -14,10 +15,15 @@ type QueryListEntry = {
     latestTask?: TaskWithInvolvements
 }
 
+
 const createMongoDatabaseListQueryClient = () => {
 
     const queryClient = useQueryClient();
     const queryKey = ["backups", "mongo-databases", "tasks"];
+
+    const [skeletons, setSkeletonCount] = useLocalStorageState<number>("mongo-database-skeletons", {
+        defaultValue: 0,
+    });
 
     const getAllQuery = useQuery({
         queryKey: queryKey,
@@ -26,7 +32,9 @@ const createMongoDatabaseListQueryClient = () => {
             if(!mongoDatabases) return [];
             const backupsPerDb = await Promise.all(mongoDatabases.map(db => getAllBackupsForDatabase(db.id)));
             const latestTasksPerDb = await Promise.all(mongoDatabases.map(db => tryGetLatestTask(db.id)));
-            
+
+            setSkeletonCount(mongoDatabases.length);
+
             return mongoDatabases.map((db, index) => {
                 return {
                     mongoDatabase: db,
@@ -40,6 +48,7 @@ const createMongoDatabaseListQueryClient = () => {
     const notifyDatabaseWasDeleted = (databaseId: number) => {
         queryClient.setQueryData(queryKey, (entries: QueryListEntry[]) => {
             const newEntries = entries.filter(entry => entry.mongoDatabase.id !== databaseId);
+            setSkeletonCount(newEntries.length);
             return newEntries;
         });
     };
@@ -57,6 +66,7 @@ const createMongoDatabaseListQueryClient = () => {
 
             queryClient.setQueryData(queryKey, (entries: QueryListEntry[]) => {
                 const newEntries = [...entries, newEntry];
+                setSkeletonCount(newEntries.length);
                 return newEntries;
             });
         }
@@ -74,7 +84,8 @@ const createMongoDatabaseListQueryClient = () => {
         getAllQuery,
         addDatabaseMutation,
         notifyDatabaseWasDeleted,
-        notifyDatabasesPotentiallyDirty
+        notifyDatabasesPotentiallyDirty,
+        skeletonCount: skeletons
     }
 }
 

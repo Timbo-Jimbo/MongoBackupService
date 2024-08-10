@@ -4,10 +4,15 @@ import { createContext, useContext, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Backup } from "@backend/db/backup.schema";
 import { getAllBackups, getAllBackupsForDatabase, getAvailableBackupModes } from "@actions/backups";
+import useLocalStorageState from "use-local-storage-state";
 
 type QueryListEntry = Backup;
 
 const createBackupListQueryClient = (mongoDatabaseId: number | undefined) => {
+
+    const [skeletons, setSkeletonCount] = useLocalStorageState<number>("backup-skeletons" + (mongoDatabaseId !== undefined ? `-mdb${mongoDatabaseId}` : ''), {
+        defaultValue: 0,
+    });
 
     const queryClient = useQueryClient();
     const queryKey = ["backups"];
@@ -16,6 +21,7 @@ const createBackupListQueryClient = (mongoDatabaseId: number | undefined) => {
         queryKey: queryKey,
         queryFn: async () => {
             const allBackups = await (mongoDatabaseId !== undefined ? getAllBackupsForDatabase(mongoDatabaseId) : getAllBackups());
+            setSkeletonCount(allBackups?.length ?? 0);
             return allBackups ?? [];
         },
     });
@@ -29,7 +35,9 @@ const createBackupListQueryClient = (mongoDatabaseId: number | undefined) => {
 
     const notifyBackupWasDeleted = (backupId: number) => {
         queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
-            return entries.filter(entry => entry.id !== backupId);
+            const newEntries = entries.filter(entry => entry.id !== backupId);
+            setSkeletonCount(newEntries.length);
+            return newEntries;
         });
     };
 
@@ -45,7 +53,8 @@ const createBackupListQueryClient = (mongoDatabaseId: number | undefined) => {
         getAllQuery,
         availableBackupModesQuery,
         notifyBackupWasDeleted,
-        notifyBackupsPotentiallyDirty
+        notifyBackupsPotentiallyDirty,
+        skeletonCount: skeletons
     }
 }
 

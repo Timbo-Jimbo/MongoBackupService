@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { TaskWithInvolvements } from "@backend/db/task.schema";
 import { deleteAllCompletedTasks, getAllTasks, getAllTasksForDatabase } from "@actions/tasks";
 import { toastForActionResult } from "@comp/toasts";
+import useLocalStorageState from "use-local-storage-state";
 
 type QueryListEntry = TaskWithInvolvements;
 
@@ -13,10 +14,15 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
     const queryClient = useQueryClient();
     const queryKey = ["tasks"];
 
+    const [skeletons, setSkeletonCount] = useLocalStorageState<number>("task-skeletons" + (mongoDatabaseId !== undefined ? `-mdb${mongoDatabaseId}` : ''), {
+        defaultValue: 0,
+    });
+    
     const getAllQuery = useQuery({
         queryKey: queryKey,
         queryFn: async () => {
             const allTasks = await (mongoDatabaseId !== undefined ? getAllTasksForDatabase(mongoDatabaseId) : getAllTasks());
+            setSkeletonCount(allTasks?.length ?? 0);
             return allTasks ?? [];
         },
         refetchInterval: (query) =>{
@@ -31,7 +37,9 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
 
             if(result?.success){
                 queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
-                    return entries.filter(entry => !result.clearedTaskIds.includes(entry.id));
+                    const newEntries = entries.filter(entry => !result.clearedTaskIds.includes(entry.id));
+                    setSkeletonCount(newEntries.length);
+                    return newEntries;
                 });
             }
         }
@@ -39,7 +47,9 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
 
     const notifyTaskWasDeleted = (taskId: number) => {
         queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
-            return entries.filter(entry => entry.id !== taskId);
+            const newEntries = entries.filter(entry => entry.id !== taskId);
+            setSkeletonCount(newEntries.length);
+            return newEntries;
         });
     };
 
@@ -57,7 +67,9 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
                 return;
 
             queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
-                return [...entries, task];
+                const newEntries = [...entries, task];
+                setSkeletonCount(newEntries.length);
+                return newEntries;
             });
         }
         else {
@@ -67,7 +79,9 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
 
     const notifyTaskWasModified = (task: TaskWithInvolvements) => {
         queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
-            return entries.map(entry => entry.id === task.id ? task : entry);
+            const newEntries = entries.map(entry => entry.id === task.id ? task : entry);
+            setSkeletonCount(newEntries.length);
+            return newEntries;
         });
     }
 
@@ -79,6 +93,7 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
         notifyTaskWasModified,
         notifyTasksPotentiallyDirty,
         clearAllCompletedTasksMutation,
+        skeletonCount: skeletons
     }
 }
 
