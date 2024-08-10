@@ -6,7 +6,8 @@ import { backups } from "@backend/db/backup.schema";
 import { database } from "@backend/db";
 import { eq } from "drizzle-orm";
 import { runProcess, runProcessesPiped } from "@lib/process";
-import { BackupCompressionFormat, Compression, MongorestoreOutputProgressExtractor } from "./mongo-utils";
+import { Compression, MongorestoreOutputProgressExtractor } from "./mongo-utils";
+import { BackupCompressionFormat } from "./compression.enums";
 
 type TaskParams = {backupId:number};
 
@@ -37,13 +38,12 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
                 };
             }
 
-            const compressionFormat = Compression.formatFromExtension(backupToRestore.archivePath);
             const availableCompressionFormats = await Compression.determineAvailableFormats();
 
-            if(!availableCompressionFormats.includes(compressionFormat)) {
+            if(!availableCompressionFormats.includes(backupToRestore.format)) {
                 return {
                     resolvedState: ResolvedTaskState.Failed,
-                    message: `Compression format of the selected backup is not supported on this system (${compressionFormat})`,
+                    message: `Compression format of the selected backup is not supported on this system (${backupToRestore.format})`,
                 };
             }
 
@@ -74,8 +74,8 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
                 }
               )
 
-            console.log(`Backups compression format is ${compressionFormat}`);
-            if(compressionFormat === BackupCompressionFormat.ZStandard) {
+            console.log(`Backups compression format is ${backupToRestore.format}`);
+            if(backupToRestore.format === BackupCompressionFormat.ZStandard) {
                 await runProcessesPiped([
                     {
                         command: 'zstd',
@@ -104,7 +104,7 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
                     }
                 ]);
             }
-            else if(compressionFormat === BackupCompressionFormat.Gzip) {
+            else if(backupToRestore.format === BackupCompressionFormat.Gzip || backupToRestore.format === BackupCompressionFormat.None) {
                 await runProcess({
                     command: "mongorestore",
                     args: [
@@ -112,7 +112,7 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
                         "--authenticationDatabase=admin",
                         `--nsInclude=${targetDatabase.databaseName}.*`,
                         "--drop",
-                        "--gzip",
+                        (backupToRestore.format === BackupCompressionFormat.Gzip ? `--gzip` : ''),
                         `--archive=${backupToRestore.archivePath}`,
                     ],
                     stderr: (data) => {
@@ -123,7 +123,7 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
             else {
                 return {
                     resolvedState: ResolvedTaskState.Failed,
-                    message: `Unsupported compression format: ${compressionFormat}`,
+                    message: `Unsupported compression format: ${backupToRestore.format}`,
                 };
             }
 

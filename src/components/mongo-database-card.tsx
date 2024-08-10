@@ -1,14 +1,15 @@
 import { deleteMongoDatabase, getMongoDatabaseConnectionStatus, startImport, startManualBackup, startRestore } from "@actions/mongo";
 import { Backup } from "@backend/db/backup.schema";
 import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongo-database.schema";
-import { Task, TaskWithInvolvements } from "@backend/db/task.schema";
+import { TaskWithInvolvements } from "@backend/db/task.schema";
+import { BackupMode } from "@backend/tasks/compression.enums";
 import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
 import { Badge } from "@comp/badge";
 import { Button } from "@comp/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuPortal, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuLabel } from "@comp/dropdown-menu";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { toast, toastForActionResult } from "@comp/toasts";
-import { ArrowDownOnSquareIcon, ArrowPathIcon, SignalIcon, SignalSlashIcon, Square3Stack3DIcon, TrashIcon } from "@heroicons/react/20/solid";
+import { ArrowDownOnSquareIcon, ArrowPathIcon, Square3Stack3DIcon, TrashIcon } from "@heroicons/react/20/solid";
 import { tryUseBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
 import { tryUseTaskListQueryClient } from "@lib/providers/task-list-query-client";
@@ -122,7 +123,7 @@ export function MongoDatabaseCard({
   })
 
   const startBackupMutation = useMutation({
-    mutationFn: async () => await startManualBackup(mongoDatabase.id),
+    mutationFn: async (backupMode: BackupMode) => await startManualBackup(mongoDatabase.id, backupMode),
     onSuccess: async (result) => {
 
       toastForActionResult(result);
@@ -192,17 +193,58 @@ export function MongoDatabaseCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => {
-                  const toastId = toast.loading("Initiating backup...");
-                  startBackupMutation.mutate(undefined, {
-                    onSettled: () => {
-                      toast.dismiss(toastId);
-                    }
-                  });
-                }} disabled={startBackupMutation.isPending}>
-                  <Square3Stack3DIcon className="w-4 h-4 mr-2" />
-                  Backup Now
-                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Square3Stack3DIcon className="w-4 h-4 mr-2" />
+                    Backup Now...
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem onClick={() => {
+                          const toastId = toast.loading("Initiating backup...");
+                          startBackupMutation.mutate(BackupMode.FasterBackup, {
+                            onSettled: () => {
+                              toast.dismiss(toastId);
+                            }
+                          });
+                        }}
+                        disabled={startBackupMutation.isPending}
+                        className="flex-col items-start"
+                      >
+                        <span className="font-semibold">Faster</span>
+                        <span className="opacity-50">Faster backup but larger file size</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {
+                          const toastId = toast.loading("Initiating backup...");
+                          startBackupMutation.mutate(BackupMode.SmallerBackup, {
+                            onSettled: () => {
+                              toast.dismiss(toastId);
+                            }
+                          });
+                        }}
+                        disabled={startBackupMutation.isPending}
+                        className="flex-col items-start"
+                      >
+                        <span className="font-semibold">Smaller</span>
+                        <span className="opacity-50">Smaller file size but takes longer to complete</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {
+                          const toastId = toast.loading("Initiating backup...");
+                          startBackupMutation.mutate(BackupMode.Balanced, {
+                            onSettled: () => {
+                              toast.dismiss(toastId);
+                            }
+                          });
+                        }} 
+                        disabled={startBackupMutation.isPending} 
+                        className="flex-col items-start"
+                      >
+                        <span className="font-semibold">Balanced</span>
+                        <span className="opacity-50">Strikes a balance between speed and file size</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <ArrowPathIcon className="w-4 h-4 mr-2" />
@@ -225,7 +267,7 @@ export function MongoDatabaseCard({
                             });
                           }}
                         >
-                          From {timeAgoString(backup.createdAt)}
+                          From {timeAgoString(backup.finishedAt)}
                         </DropdownMenuItem>    
                       ))}
                       {ownBackups.length == 0 && (
@@ -256,7 +298,7 @@ export function MongoDatabaseCard({
                                     });
                                   }}
                                 >
-                                  From {timeAgoString(backup.createdAt)}
+                                  From {timeAgoString(backup.finishedAt)}
                                 </DropdownMenuItem>    
                               ))}
                               {otherDatabase.backups.length == 0 && (

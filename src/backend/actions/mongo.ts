@@ -13,6 +13,7 @@ import { backups } from "@backend/db/backup.schema";
 import { MongoRestoreExecutor } from "@backend/tasks/mongo-restore";
 import { MongoImportExecutor } from "@backend/tasks/mongo-import";
 import { mongoDatabaseTaskInvolvements } from "@backend/db/mongo-database-task-involvement.schema";
+import { BackupMode } from "@backend/tasks/compression.enums";
 
 function censorMongoDatabase(mongoDatabase: MongoDatabase): MongoDatabaseCensored {
     
@@ -96,14 +97,17 @@ export const getMongoDatabaseConnectionStatus = withAuthOrRedirect(async (mongoD
     };
 });
 
-export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: number) => {
+export const startManualBackup = withAuthOrRedirect(async (mongoDatabaseId: number, backupMode: BackupMode) => {
     const result = await TaskRunner.startTask({
         taskType: TaskType.ManualBackup,
         executorClass: MongoBackupTaskExecutor,
         databases: [{
             mongoDatabaseId: mongoDatabaseId,
             involvementReason: 'Performing Backup (Manual)'
-        }]
+        }],
+        executorParams: {
+            backupMode: backupMode
+        }
     });
 
     return {

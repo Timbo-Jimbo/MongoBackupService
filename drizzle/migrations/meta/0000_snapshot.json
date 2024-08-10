@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b3c48eb3-ac71-4684-80e4-5c08c65fd48c",
+  "id": "fd642ba5-13dc-451b-8d1d-ee95bdcefcd0",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "backups": {
@@ -28,6 +28,20 @@
           "notNull": true,
           "autoincrement": false
         },
+        "format": {
+          "name": "format",
+          "type": "text(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "mode": {
+          "name": "mode",
+          "type": "text(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "archive_path": {
           "name": "archive_path",
           "type": "text",
@@ -38,6 +52,57 @@
         "size_bytes": {
           "name": "size_bytes",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "mongo_database_task_involvements": {
+      "name": "mongo_database_task_involvements",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "mongo_database_id": {
+          "name": "mongo_database_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -124,13 +189,6 @@
           "notNull": true,
           "autoincrement": true
         },
-        "mongo_database_id": {
-          "name": "mongo_database_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "type": {
           "name": "type",
           "type": "text",
@@ -154,13 +212,13 @@
           "autoincrement": false,
           "default": "'running'"
         },
-        "can_be_cancelled": {
-          "name": "can_be_cancelled",
-          "type": "integer",
+        "cancellation_type": {
+          "name": "cancellation_type",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": false
+          "default": "'not_cancellable'"
         },
         "cancel_requested": {
           "name": "cancel_requested",

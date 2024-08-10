@@ -1,21 +1,26 @@
 import { existsSync, mkdirSync, unlinkSync, statSync } from "node:fs";
 import { v7 as uuidv7 } from "uuid";
-import { TaskCommands, TaskExecutor, TaskExecuteResult, TaskCancelledError, NoTaskParams as NoAdditionalParams } from "./task-runner";
+import { TaskCommands, TaskExecutor, TaskExecuteResult } from "./task-runner";
 import { MongoDatabaseAccess } from "@backend/db/mongo-database.schema";
-import { runAndForget } from "@lib/utils";
-import { ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
+import { ResolvedTaskState, TaskCancellationType, tasks } from "@backend/db/task.schema";
 import { database } from "@backend/db";
 import { backups } from "@backend/db/backup.schema";
-import { BackupCompressionFormat, Compression, MongodumpOutputProgressExtractor, getCollectionMetadata } from "./mongo-utils";
-import { ProcessCancelledError, runProcess, runProcessesPiped } from "@lib/process";
+import { Compression, MongodumpOutputProgressExtractor, getCollectionMetadata } from "./mongo-utils";
+import { runProcess, runProcessesPiped } from "@lib/process";
+import { BackupCompressionFormat, BackupMode } from "./compression.enums";
 
 export const MongoBackupFolder = "data/backups";
 
-export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams> {
+export type Params = {
+    backupMode?: BackupMode;
+}
+
+export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
     
-    async execute(commands: TaskCommands, databases: MongoDatabaseAccess[]): Promise<TaskExecuteResult> {
+    async execute(commands: TaskCommands, databases: MongoDatabaseAccess[], { backupMode = BackupMode.Balanced } : Params): Promise<TaskExecuteResult> {
 
         const targetDatabase = databases[0];
+        const startedAt = new Date();
 
         mkdirSync(MongoBackupFolder, { recursive: true });
         const now = new Date();
@@ -57,12 +62,21 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
                 }
             )
 
-            const compressionFormatsAvailable = await Compression.determineAvailableFormats();
-            const formatOfChoice = compressionFormatsAvailable[0] ?? BackupCompressionFormat.Gzip;
-            console.log(`Backing up using ${formatOfChoice} compression`);
-            backupArchivePath = `${backupArchivePath}.${formatOfChoice}`;
+            const backupFormat = Compression.formatFromMode(backupMode);
+            {
+                const availableFormats = await Compression.determineAvailableFormats();
+                if(!availableFormats.includes(backupFormat)){
+                    return {
+                        resolvedState: ResolvedTaskState.Failed,
+                        message: `Backup mode '${backupMode}' is not supported on this system`,
+                    }
+                }
+            }
 
-            if(formatOfChoice == BackupCompressionFormat.ZStandard)
+            console.log(`Backing up using ${backupFormat} compression`);
+            backupArchivePath = `${backupArchivePath}.${Compression.formatToExtension(backupFormat)}`;
+
+            if(backupFormat == BackupCompressionFormat.ZStandard)
             {
                 await runProcessesPiped([
                     {
@@ -88,7 +102,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
                     }
                 ])
             }
-            else if(formatOfChoice == BackupCompressionFormat.Gzip)
+            else if(backupFormat == BackupCompressionFormat.Gzip || backupFormat == BackupCompressionFormat.None)
             {
                 await runProcess({
                     command: 'mongodump',
@@ -97,7 +111,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
                         '--authenticationDatabase=admin',
                         `--db=${targetDatabase.databaseName}`,
                         `--archive=${backupArchivePath}`,
-                        `--gzip`,
+                        (backupFormat == BackupCompressionFormat.Gzip) ? '--gzip' : '',
                     ],
                     stderr: (data) => progessExtractor.processData(data),
                 }, async () => {
@@ -112,6 +126,10 @@ export class MongoBackupTaskExecutor implements TaskExecutor<NoAdditionalParams>
                 mongoDatabaseId: targetDatabase.id,
                 archivePath: backupArchivePath,
                 sizeBytes: statSync(backupArchivePath).size,
+                format: backupFormat,
+                mode: backupMode,
+                startedAt: startedAt,
+                finishedAt: new Date(),
                 sourceMetadata: {
                     databaseName: targetDatabase.databaseName,
                     collections: collectionMetadata.map(cw => ({

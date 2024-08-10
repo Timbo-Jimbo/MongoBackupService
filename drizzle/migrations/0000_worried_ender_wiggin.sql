@@ -2,8 +2,19 @@ CREATE TABLE `backups` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`mongo_database_id` integer,
 	`source_metadata` text NOT NULL,
+	`format` text(3) NOT NULL,
+	`mode` text(3) NOT NULL,
 	`archive_path` text NOT NULL,
 	`size_bytes` integer NOT NULL,
+	`started_at` integer NOT NULL,
+	`finished_at` integer NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `mongo_database_task_involvements` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`mongo_database_id` integer NOT NULL,
+	`task_id` integer NOT NULL,
+	`reason` text NOT NULL,
 	`created_at` integer NOT NULL
 );
 --> statement-breakpoint
@@ -19,11 +30,10 @@ CREATE TABLE `mongo_databases` (
 --> statement-breakpoint
 CREATE TABLE `tasks` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`mongo_database_id` integer NOT NULL,
 	`type` text NOT NULL,
 	`is_complete` integer DEFAULT false NOT NULL,
 	`state` text DEFAULT 'running' NOT NULL,
-	`can_be_cancelled` integer DEFAULT false NOT NULL,
+	`cancellation_type` text DEFAULT 'not_cancellable' NOT NULL,
 	`cancel_requested` integer DEFAULT false NOT NULL,
 	`progress` text,
 	`started_at` integer NOT NULL,

@@ -2,6 +2,7 @@ import { MongoDatabaseAccess } from "@backend/db/mongo-database.schema";
 import { MongoClient } from "mongodb";
 import { exec } from "node:child_process";
 import { promisify } from "util";
+import { BackupCompressionFormat, BackupMode } from "./compression.enums";
 
 export class MongodumpOutputProgressExtractor 
 {
@@ -199,11 +200,6 @@ export async function getCollectionMetadata(databaseAccess: MongoDatabaseAccess)
 }
 
 const execPromise = promisify(exec);
-export enum BackupCompressionFormat
-{
-    ZStandard = 'zst',
-    Gzip = 'gz'
-}
 
 export class Compression 
 {
@@ -223,23 +219,33 @@ export class Compression
         } catch (error) {}
     
         availableTools.push(BackupCompressionFormat.Gzip);
+        availableTools.push(BackupCompressionFormat.None);
     
         this.availableFormatsCache =  availableTools;
         return availableTools;
     }
 
-    static formatFromExtension(extensionOrPath: string): BackupCompressionFormat {
+    static async determineAvailableModes(): Promise<BackupMode[]> {
+        const allModes = [BackupMode.FasterBackup, BackupMode.Balanced, BackupMode.SmallerBackup];
+        const availableFormats = await this.determineAvailableFormats();
+        return allModes.filter(mode => availableFormats.includes(this.formatFromMode(mode)));
+    }
 
-        let extension = extensionOrPath;
-
-        if(extensionOrPath.includes('.')) {
-            extension = extensionOrPath.split('.').pop()!;
+    static formatFromMode(mode: BackupMode): BackupCompressionFormat {
+        switch(mode) {
+            case BackupMode.FasterBackup: return BackupCompressionFormat.None;
+            case BackupMode.Balanced: return BackupCompressionFormat.Gzip;
+            case BackupMode.SmallerBackup: return BackupCompressionFormat.ZStandard
+            default: throw new Error(`Unknown backup mode: ${mode}`);
         }
-        
-        switch(extension) {
-            case 'zst': return BackupCompressionFormat.ZStandard;
-            case 'gz': return BackupCompressionFormat.Gzip;
-            default: throw new Error(`Unknown extension: ${extension}`);
+    }
+
+    static formatToExtension(format: BackupCompressionFormat): string {
+        switch(format) {
+            case BackupCompressionFormat.ZStandard: return 'zst';
+            case BackupCompressionFormat.Gzip: return 'gz';
+            case BackupCompressionFormat.None: return 'bak';
+            default: throw new Error(`Unknown format: ${format}`);
         }
     }
 }
