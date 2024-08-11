@@ -19,9 +19,14 @@ export function runAndForget(action: () => Promise<void>) {
 }
 
 export function timeAgoString(time: Date) {
-  const msSinceBackup = Date.now() - time.getTime();
-  const lessThanOneMinSinceBackup = msSinceBackup < 60000;
-  return lessThanOneMinSinceBackup ? "Just now" : (humanizeDuration(msSinceBackup, {round: true, units:["y","mo","w","d", "h", "m"], largest: 1}) + " ago");
+  const msSince = Date.now() - time.getTime();
+  const lessThanOneMinSince = msSince < 60000;
+  return lessThanOneMinSince ? "Just now" : (humanizeDuration(msSince, {round: true, units:["y","mo","w","d", "h", "m"], largest: 1}) + " ago");
+}
+
+export function timeUntilString(time: Date) {
+  const msUntil = time.getTime() - Date.now();
+  return humanizeDuration(msUntil, {round: true, units:["y","mo","w","d", "h", "m"], largest: 1}) + " from now";
 }
 
 export function humanReadableEnumString(enumValue: string) {

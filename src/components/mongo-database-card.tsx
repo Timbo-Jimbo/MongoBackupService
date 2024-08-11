@@ -10,7 +10,7 @@ import { Button } from "@comp/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuPortal, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuLabel } from "@comp/dropdown-menu";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { toast, toastForActionResult } from "@comp/toasts";
-import { ArrowDownOnSquareIcon, ArrowPathIcon, InformationCircleIcon, Square3Stack3DIcon, TrashIcon } from "@heroicons/react/20/solid";
+import { ArrowDownOnSquareIcon, ArrowPathIcon, InformationCircleIcon, PlusIcon, Square3Stack3DIcon, TrashIcon } from "@heroicons/react/20/solid";
 import { useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
 import { tryUseTaskListQueryClient } from "@lib/providers/task-list-query-client";
@@ -18,7 +18,8 @@ import { cn, timeAgoString } from "@lib/utils";
 import { Cross2Icon, DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
-import { DialogBackupModeSelect } from "./dialog-backup-mode-select";
+import { DialogStartManualBackup } from "./dialog-start-manual-backup";
+import { DialogCreateBackupPolicy } from "./dialog-create-backup-policy";
 
 type Ping = {
   isPending: boolean,
@@ -114,7 +115,8 @@ export function MongoDatabaseCard({
 }: MongoDatabaseCardProps) {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [backupModeSelectDialogOpen, setBackupModeSelectDialogOpen] = useState(false);
+  const [startManualBackupDialogOpen, setStartManualBackupDialogOpen] = useState(false);
+  const [addBackupPolicyDialogOpen, setAddBackupPolicyDialogOpen] = useState(false);
   const mongoDatbaseListQueryClient = useMongoDatabaseListQueryClient();
   const taskListQueryClient = tryUseTaskListQueryClient();
   const backupQueryClient = useBackupListQueryClient();
@@ -196,14 +198,14 @@ export function MongoDatabaseCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem disabled={backupQueryClient.availableBackupModesQuery.isPending} onClick={() => setBackupModeSelectDialogOpen(true)}>
+                <DropdownMenuItem disabled={backupQueryClient.availableBackupModesQuery.isPending} onClick={() => setStartManualBackupDialogOpen(true)}>
                   <Square3Stack3DIcon className="w-4 h-4 mr-2" />
                   Backup...
                 </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <ArrowPathIcon className="w-4 h-4 mr-2" />
-                    Restore...
+                    Restore
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuSubContent>
@@ -277,7 +279,7 @@ export function MongoDatabaseCard({
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <ArrowDownOnSquareIcon className="w-4 h-4 mr-2" />
-                    Import...
+                    Import
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuSubContent>
@@ -333,9 +335,9 @@ export function MongoDatabaseCard({
                 </div>
               </AlertGenericConfirmationDialogContent>
             </AlertDialog>
-            <DialogBackupModeSelect 
-              open={backupModeSelectDialogOpen} 
-              onOpenChange={setBackupModeSelectDialogOpen} 
+            <DialogStartManualBackup 
+              open={startManualBackupDialogOpen} 
+              onOpenChange={setStartManualBackupDialogOpen} 
               onBackupModeSelected={(mode) => {
                 const toastId = toast.loading("Initiating backup...");
                 startBackupMutation.mutate(mode, {
@@ -344,7 +346,7 @@ export function MongoDatabaseCard({
                   }
                 });
 
-                setBackupModeSelectDialogOpen(false);
+                setStartManualBackupDialogOpen(false);
               }}
               supportedOptions={backupQueryClient?.availableBackupModesQuery.data ?? [BackupMode.Gzip]}
             />
@@ -353,6 +355,13 @@ export function MongoDatabaseCard({
       <Badges className="inline-flex lg:hidden" ping={ping} mongoDatabase={mongoDatabase} latestTask={latestTask}/>
       <div className="flex flex-row gap-2 place-items-center">
         <p className="text-sm text-muted-foreground">{mongoDatabase.censoredConnectionUri}</p>
+      </div>
+      <div className="flex flex-row gap-2 place-items-center">
+        <Button variant={"outline"} onClick={() => setAddBackupPolicyDialogOpen(true)}>
+          <PlusIcon className="w-4 h-4 mr-2" />
+          Create Backup Policy
+        </Button>
+        <DialogCreateBackupPolicy supportedOptions={backupQueryClient.availableBackupModesQuery?.data ?? []} open={addBackupPolicyDialogOpen} onOpenChange={setAddBackupPolicyDialogOpen} mongoDatabaseId={mongoDatabase.id}/>
       </div>
     </div>
   );

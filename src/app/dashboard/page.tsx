@@ -1,11 +1,8 @@
 'use client'
 
-import { LogoutButton } from "@app/login/components"
 import { TaskList } from "./task-list"
 import { MongoDatabaseList } from "./mongo-database-list";
 import { BackupList } from "./backup-list";
-import { Separator } from "@comp/separator";
-import { Card, CardContent } from "@comp/card";
 
 export default function DashboardPage() {
 
