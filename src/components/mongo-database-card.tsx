@@ -307,7 +307,7 @@ export function MongoDatabaseCard({
                   </DropdownMenuPortal>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="bg-destructive text-destructive-foreground" disabled={deleteDatabaseMutation.isPending} onClick={() => setDeleteDialogOpen(true)}>
+                <DropdownMenuItem className="bg-destructive/75 focus:bg-destructive text-destructive-foreground" disabled={deleteDatabaseMutation.isPending} onClick={() => setDeleteDialogOpen(true)}>
                     <Cross2Icon className="w-4 h-4 mr-2" />
                     Remove
                 </DropdownMenuItem>

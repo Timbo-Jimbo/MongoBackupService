@@ -2,11 +2,11 @@
 
 import { SkeletonList } from "@/components/skeleton-list";
 import { TaskCard } from "@/components/task-card";
-import { Button, ButtonWithSpinner } from "@comp/button";
+import { ButtonWithSpinner } from "@comp/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@comp/card";
+import { Separator } from "@comp/separator";
 import { useTaskListQueryClient } from "@lib/providers/task-list-query-client";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
-import { Separator } from "@radix-ui/react-separator";
 import { Fragment } from "react";
 
 export function TaskList() {

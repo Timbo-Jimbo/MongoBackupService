@@ -2,19 +2,20 @@ import { deleteBackup } from "@actions/backups";
 import { Backup } from "@backend/db/backup.schema";
 import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
 import { Button } from "@comp/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@comp/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@comp/dropdown-menu";
 import { toast, toastForActionResult } from "@comp/toasts";
 import { ChartPieIcon, ClockIcon, DocumentIcon, Square3Stack3DIcon, TableCellsIcon, TrashIcon } from "@heroicons/react/20/solid";
 import { useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
 import { cn, humanReadableEnumString, timeAgoString } from "@lib/utils";
-import { DotsVerticalIcon } from "@radix-ui/react-icons";
+import { DotsVerticalIcon, DownloadIcon } from "@radix-ui/react-icons";
 import { useMutation } from "@tanstack/react-query";
 import prettyBytes from "pretty-bytes"
 import { useState } from "react";
 import { DurationDisplay } from "./time-since-display";
 import { Badge } from "@comp/badge";
 import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
+import Link from "next/link";
 
 function Badges({
   backup,
@@ -98,7 +99,14 @@ export function BackupCard({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem className="bg-destructive text-destructive-foreground" onClick={() => setDeleteDialogOpen(true)} disabled={deleteBackupMutation.isPending}>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/api/download/${backup.id}`}>
+                      <DownloadIcon className="w-4 h-4 mr-2" />
+                      Download
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="bg-destructive/75 focus:bg-destructive text-destructive-foreground" onClick={() => setDeleteDialogOpen(true)} disabled={deleteBackupMutation.isPending}>
                       <TrashIcon className="w-4 h-4 mr-2" />
                       Delete
                   </DropdownMenuItem>
