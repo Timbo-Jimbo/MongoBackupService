@@ -106,7 +106,9 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
                             progessExtractor.processData(data);
                         }
                     }
-                ]);
+                ], async () => {
+                    await commands.throwIfCancelled();
+                });
             }
             else if(backupToRestore.format === BackupCompressionFormat.Gzip) {
                 await runProcess({
@@ -122,6 +124,8 @@ export class MongoRestoreExecutor implements TaskExecutor<TaskParams> {
                     stderr: (data) => {
                         progessExtractor.processData(data);
                     }
+                }, async () => {
+                    await commands.throwIfCancelled();
                 });
             }
             else {

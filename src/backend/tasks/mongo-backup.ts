@@ -117,7 +117,9 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
                         command: 'zstd',
                         args: zstdArgs
                     }
-                ]);
+                ], async () => {
+                    await commands.throwIfCancelled();
+                });
             }
             else if(backupFormat === BackupCompressionFormat.Gzip)
             {
