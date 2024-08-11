@@ -42,10 +42,10 @@
     --popover-foreground: 0 0% 98%;
     --primary: 0 0% 98%;
     --primary-foreground: 240 5.9% 10%;
-    --secondary: 202 18% 17.2%;
+    --secondary: 195.92 19.97% 16.13%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 202 20% 10.2%;
-    --muted-foreground: 210 10% 40%;
+    --muted: 168.23 12.15% 15.9%;
+    --muted-foreground: 147.29 4.23% 43.2%;
     --accent: 185 60% 10.2%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
@@ -71,4 +71,61 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@layer components {
+  
+  .gradientborder-radius-none {
+    --gradient-border-radius: 0 !important;
+  }
+
+  .gradientborder-radius-sm {
+    --gradient-border-radius: calc(var(--radius) - 4px) !important;
+  }
+  
+  .gradientborder-radius-md {
+    --gradient-border-radius: calc(var(--radius) - 2px) !important;
+  }
+
+  .gradientborder-radius-lg {
+    --gradient-border-radius: var(--radius) !important;
+  }
+
+  .gradientborder-radius-xl {
+    --gradient-border-radius: calc(var(--radius) + 4px) !important;
+  }
+
+  .gradientborder-radius-2xl {
+    --gradient-border-radius: calc(var(--radius) + 8px) !important;
+  }
+
+  .gradientborder-fill-opacity-none::before {
+    --gradient-border-fill-opacity: 0 !important;
+  }
+
+  .gradientborder-fill-opacity-min::before {
+    --gradient-border-fill-opacity: 0.4 !important;
+  }
+
+  .gradientborder-fill-opacity-mid::before {
+    --gradient-border-fill-opacity: 0.6 !important;
+  }
+
+  .gradientborder-fill-opacity-max::before {
+    --gradient-border-fill-opacity: 0.8 !important;
+  }
+  
+  .gradientborder {
+    --gradient-border-radius: var(--radius);
+    --gradient-border-size: 2px;
+    @apply rounded-[var(--gradient-border-radius)] border-none bg-gradient-to-tr from-emerald-900/60 to-slate-800/60 backdrop-blur-md
+  }
+
+  .gradientborder::before {
+    content: "";
+    --gradient-border-fill-opacity: 0.8;
+    background-color: hsl(var(--background) / var(--gradient-border-fill-opacity));
+    @apply absolute inset-[var(--gradient-border-size)] rounded-[calc(var(--gradient-border-radius)-var(--gradient-border-size))] border-none -z-10
+  }
+
 }

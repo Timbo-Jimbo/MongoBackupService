@@ -19,7 +19,7 @@ export async function bootstrap() {
                 hasProgressValues: false,
                 message: "Task was interupted by server shutdown."
             } as TaskProgress
-        });
+        }).where(eq(tasks.id, task.id));
     }
 
     //todo... clean up orphaned backup files

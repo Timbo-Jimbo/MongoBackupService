@@ -2,7 +2,7 @@
 
 import { MongoDatabaseCard } from "@/components/mongo-database-card";
 import { ButtonWithSpinner } from "@comp/button";
-import { DialogHeader, DialogFooter, Dialog, DialogTrigger, DialogContent, DialogDescription, DialogTitle } from "@comp/dialog";
+import { DialogHeader, DialogFooter, Dialog, DialogContent, DialogDescription, DialogTitle } from "@comp/dialog";
 import { Input } from "@comp/input";
 import { Label } from "@comp/label";
 import { Separator } from "@comp/separator";
@@ -24,7 +24,7 @@ export function MongoDatabaseList() {
   const results = mongoDatbaseListQueryClient.getAllQuery.data || [];
   
   return (
-    <Card className="flex flex-col w-full border-0 lg:border">
+    <Card className="flex flex-col w-full">
       <CardHeader>
         <CardTitle className="text-xl font-bold flex justify-between items-center">
           <span>Mongo Databases</span>
@@ -129,7 +129,7 @@ export function MongoDatabaseList() {
               </div>
             </div>
             <DialogFooter>
-              <ButtonWithSpinner type="submit" isLoading={mongoDatbaseListQueryClient.addDatabaseMutation.isPending}>Add</ButtonWithSpinner>
+              <ButtonWithSpinner type="submit" isLoading={mongoDatbaseListQueryClient.addDatabaseMutation.isPending}>Register</ButtonWithSpinner>
             </DialogFooter>
           </form>
         </DialogContent>

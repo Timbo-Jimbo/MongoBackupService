@@ -54,7 +54,7 @@ export const DialogBackupModeSelect = ({
     // Just from some testing that i did..!
     // its all just for an approximation, to give
     // the user an idea of what they are selecting
-    const profilingData = [
+    const profilingData: ProfilingData[]= [
         { 
             backupMode: BackupMode.Gzip,
             size: 636,
