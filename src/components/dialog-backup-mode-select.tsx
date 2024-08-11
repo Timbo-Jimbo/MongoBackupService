@@ -11,7 +11,6 @@ type ProfilingData = {
     backupMode: BackupMode;
     backupTime: number;
     size: number;
-    restoreTime: number;
 }
 
 class ProfilingRange {
@@ -58,32 +57,31 @@ export const DialogBackupModeSelect = ({
     const profilingData = [
         { 
             backupMode: BackupMode.Gzip,
-            size: 309,
-            backupTime: 100,
-            restoreTime: 100
+            size: 636,
+            backupTime: 14.5
         },
         { 
             backupMode: BackupMode.FasterBackup,
-            size: 356,
-            backupTime: 100,
-            restoreTime: 100
+            size: 381,
+            backupTime: 6.5
         },
         { 
             backupMode: BackupMode.Balanced,
-            size: 246,
-            backupTime: 100,
-            restoreTime: 100
+            size: 309,
+            backupTime: 13.8
         },
         { 
             backupMode: BackupMode.SmallerBackup,
-            size: 192,
-            backupTime: 100,
-            restoreTime: 100
+            size: 292,
+            backupTime: 28.8
         },
     ];
 
     const sizeRange = ProfilingRange.calculate(profilingData.map(x => x.size), 0.1);
     const sizeOfSelectedMode = profilingData.find(x => x.backupMode === selectedMode)?.size ?? sizeRange.min;
+
+    const timeRange = ProfilingRange.calculate(profilingData.map(x => x.backupTime), 0.1);
+    const timeOfSelectedMode = profilingData.find(x => x.backupMode === selectedMode)?.backupTime ?? timeRange.min;
     
     const badColorHue = -10
     const goodColorHue = 120;
@@ -91,6 +89,7 @@ export const DialogBackupModeSelect = ({
     const luminance = 30;
 
     const sizeHue = (1-sizeRange.getPercentageRange(sizeOfSelectedMode)) * (goodColorHue - badColorHue) + badColorHue;
+    const timeHue = (1-timeRange.getPercentageRange(timeOfSelectedMode)) * (goodColorHue - badColorHue) + badColorHue;
 
     return (
         <Dialog onOpenChange={onOpenChange} open={open}>
@@ -112,8 +111,8 @@ export const DialogBackupModeSelect = ({
                             <TabsTrigger value={BackupMode.SmallerBackup} className="text-lg">Smaller</TabsTrigger>
                         </TabsList>
                         <div className="grid grid-cols-8 gap-4 justify-items-end items-center">
-                            <span className="col-span-1">Speed</span>
-                            <Progress className="col-span-7" value={0} max={100} />
+                            <span className="col-span-1">Time</span>
+                            <Progress className="col-span-7" indicatorClassName="opacity-75" style={{ "backgroundColor": `hsl(${timeHue}, ${saturation}%, ${luminance}%)` }} value={timeRange.getPercentageRange(timeOfSelectedMode) * 100} max={100} />
                             <span className="col-span-1">Size</span>
                             <Progress className="col-span-7" indicatorClassName="opacity-75" style={{ "backgroundColor": `hsl(${sizeHue}, ${saturation}%, ${luminance}%)` }} value={sizeRange.getPercentageRange(sizeOfSelectedMode) * 100} max={100} />
                         </div>
