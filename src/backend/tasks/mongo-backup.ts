@@ -91,7 +91,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
 
                 if(backupFormat === BackupCompressionFormat.ZStandardFast)
                 {
-                    zstdArgs.unshift('--fast=10');
+                    zstdArgs.unshift('-5');
                 }
                 else if(backupFormat === BackupCompressionFormat.ZStandardBalanced)
                 {
@@ -109,7 +109,6 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
                             `--uri=${targetDatabase.connectionUri}`,
                             '--authenticationDatabase=admin',
                             `--db=${targetDatabase.databaseName}`,
-                           `--forceTableScan`,
                             `--archive`,
                         ],
                         stderr: (data) => progessExtractor.processData(data),
