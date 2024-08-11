@@ -17,6 +17,7 @@ export const getAllBackupsForDatabase = withAuthOrRedirect(async (mongoDatabaseI
 
 export const deleteBackup = withAuthOrRedirect(async (id: number) => {
     const backup = await database.query.backups.findFirst({ where: eq(backups.id, id) });
+
     if(backup) {
         await database.delete(backups).where(eq(backups.id, id)).execute();
         unlinkSync(backup.archivePath);

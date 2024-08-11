@@ -1,7 +1,7 @@
 import { sqliteStringEnum } from "@backend/utils";
-import { relations } from "drizzle-orm";
+import { Relation, relations } from "drizzle-orm";
 import { integer, sqliteTable, SQLiteUpdateSetSource, text } from "drizzle-orm/sqlite-core";
-import { MongoDatabaseTaskInvolvement, mongoDatabaseTaskInvolvements } from "./mongo-database-task-involvement.schema";
+import { MongoDatabaseToTask, mongoDatabasesToTasks } from "./mongo-databases-to-tasks.schema";
 
 export enum ResolvedTaskState {
     Completed = 'completed',
@@ -59,11 +59,16 @@ export const tasks = sqliteTable('tasks', {
     completedAt: integer('completed_at', {mode: 'timestamp'})
 });
 
+type TaskRelations<T> = {
+    associatedMongoDatabases: T;
+}
+
 export const tasksRelations = relations(tasks, ({ many }) => ({
-    involvements: many(mongoDatabaseTaskInvolvements),
-}));
+    associatedMongoDatabases: many(mongoDatabasesToTasks),
+} satisfies TaskRelations<Relation>));
+
 
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = typeof tasks.$inferInsert;
 export type UpdateTask = SQLiteUpdateSetSource<typeof tasks>
-export type TaskWithInvolvements = Task & { involvements: MongoDatabaseTaskInvolvement[] };
+export type TaskWithRelations = Task & TaskRelations<MongoDatabaseToTask[]>

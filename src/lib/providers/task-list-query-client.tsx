@@ -2,12 +2,12 @@
 
 import { createContext, useContext } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { TaskWithInvolvements } from "@backend/db/task.schema";
+import { TaskWithRelations } from "@backend/db/task.schema";
 import { deleteAllCompletedTasks, getAllTasks, getAllTasksForDatabase } from "@actions/tasks";
 import { toastForActionResult } from "@comp/toasts";
 import useLocalStorageState from "use-local-storage-state";
 
-type QueryListEntry = TaskWithInvolvements;
+type QueryListEntry = TaskWithRelations;
 
 const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
 
@@ -60,10 +60,10 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
         });
     }
 
-    const notifyTaskWasAdded = (task?: TaskWithInvolvements | undefined) => {
+    const notifyTaskWasAdded = (task?: TaskWithRelations | undefined) => {
         if(task){
 
-            if(mongoDatabaseId !== undefined && !task.involvements.some(i => i.mongoDatabaseId !== mongoDatabaseId)) 
+            if(mongoDatabaseId !== undefined && !task.associatedMongoDatabases.some(i => i.mongoDatabaseId !== mongoDatabaseId)) 
                 return;
 
             queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
@@ -77,7 +77,7 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
         }
     }
 
-    const notifyTaskWasModified = (task: TaskWithInvolvements) => {
+    const notifyTaskWasModified = (task: TaskWithRelations) => {
         queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
             const newEntries = entries.map(entry => entry.id === task.id ? task : entry);
             setSkeletonCount(newEntries.length);

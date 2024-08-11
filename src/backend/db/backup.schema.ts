@@ -1,8 +1,9 @@
-import { relations } from "drizzle-orm";
+import { Relation, relations } from "drizzle-orm";
 import { integer, sqliteTable, SQLiteUpdateSetSource, text } from "drizzle-orm/sqlite-core";
-import { mongoDatabases } from "./mongo-database.schema";
+import { MongoDatabase, mongoDatabases } from "./mongo-database.schema";
 import { sqliteStringEnum } from "@backend/utils";
 import { BackupCompressionFormat, BackupMode } from "@backend/tasks/compression.enums";
+import { backupPolicies, BackupPolicy } from "./backup-policy.schema";
 
 export type BackupSourceMetadata = {
     databaseName: string;
@@ -15,6 +16,7 @@ export type BackupSourceMetadata = {
 export const backups = sqliteTable('backups', {
     id: integer('id').primaryKey({autoIncrement: true}),
     mongoDatabaseId: integer('mongo_database_id'),
+    backupPolicyId: integer('backup_policy_id'),
     sourceMetadata: text('source_metadata', {mode: 'json'}).notNull().$type<BackupSourceMetadata>(),
     format: text('format', sqliteStringEnum(BackupCompressionFormat)).notNull().$type<BackupCompressionFormat>(),
     mode: text('mode', sqliteStringEnum(BackupMode)).notNull().$type<BackupMode>(),
@@ -28,6 +30,10 @@ export const backupsRelations = relations(backups, ({ one }) => ({
     mongoDatabase: one(mongoDatabases, {
         fields: [backups.mongoDatabaseId],
         references: [mongoDatabases.id]
+    }),
+    backupPolicy: one(backupPolicies, {
+        fields: [backups.backupPolicyId],
+        references: [backupPolicies.id]
     }),
 }));
 

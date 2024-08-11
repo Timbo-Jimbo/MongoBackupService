@@ -86,7 +86,6 @@ export function TaskCard({
 
       if(!result?.success) return;
 
-      console.log("notifyTaskWasDeleted", task.id);
       taskListQueryClient.notifyTaskWasDeleted(task.id);
     }
   });

@@ -4,7 +4,8 @@ import { mkdirSync } from "fs";
 import * as taskSchema from "./task.schema"
 import * as mongoDatabaseSchema from "./mongo-database.schema";
 import * as backupSchema from "./backup.schema";
-import * as mongoDatabaseTaskInvolvementsSchema from "./mongo-database-task-involvement.schema";
+import * as mongoDatabaseTasksSchema from "./mongo-databases-to-tasks.schema";
+import * as backupPoliciesSchema from "./backup-policy.schema";
 
 //ensure folder exists for db data
 mkdirSync("data/db", {recursive: true });
@@ -13,5 +14,11 @@ const betterSqliteDb = createDb("data/db/db.sqlite");
 
 console.log("Creating DB client");
 export const database = drizzle(betterSqliteDb, {
-    schema: { ...taskSchema, ...mongoDatabaseSchema, ...backupSchema, ...mongoDatabaseTaskInvolvementsSchema }
+    schema: { 
+        ...taskSchema, 
+        ...mongoDatabaseSchema, 
+        ...backupSchema, 
+        ...mongoDatabaseTasksSchema,
+        ...backupPoliciesSchema
+    }
 });

@@ -1,31 +1,31 @@
 'use server'
 
 import { database } from "@backend/db";
-import { InsertTask, tasks, TaskWithInvolvements } from "@backend/db/task.schema";
+import { InsertTask, tasks, TaskWithRelations } from "@backend/db/task.schema";
 import { desc, eq, inArray } from "drizzle-orm";
 import { withAuthOrRedirect } from "./utils";
-import { mongoDatabaseTaskInvolvements } from "@backend/db/mongo-database-task-involvement.schema";
+import { mongoDatabasesToTasks } from "@backend/db/mongo-databases-to-tasks.schema";
 
-export const getAllTasks = withAuthOrRedirect(async (refreshIds?: number[] | undefined): Promise<TaskWithInvolvements[]> => {
+export const getAllTasks = withAuthOrRedirect(async (refreshIds?: number[] | undefined): Promise<TaskWithRelations[]> => {
     
-    if(refreshIds) return await database.query.tasks.findMany({ where: inArray(tasks.id, refreshIds), orderBy: [desc(tasks.id)], with: {involvements: true} });
-    return await database.query.tasks.findMany({ orderBy: [desc(tasks.id)], with: { involvements: true} });
+    if(refreshIds) return await database.query.tasks.findMany({ where: inArray(tasks.id, refreshIds), orderBy: [desc(tasks.id)], with: {associatedMongoDatabases: true} });
+    return await database.query.tasks.findMany({ orderBy: [desc(tasks.id)], with: { associatedMongoDatabases: true} });
 });
 
 export const getAllTasksForDatabase = withAuthOrRedirect(async (mongoDatabaseId: number) => {
-    return (await database.query.mongoDatabaseTaskInvolvements.findMany({
-        where: eq(mongoDatabaseTaskInvolvements.mongoDatabaseId, mongoDatabaseId), 
-        orderBy: [desc(mongoDatabaseTaskInvolvements.createdAt)],
+    return (await database.query.mongoDatabasesToTasks.findMany({
+        where: eq(mongoDatabasesToTasks.mongoDatabaseId, mongoDatabaseId), 
+        orderBy: [desc(mongoDatabasesToTasks.createdAt)],
         with: { task: true }
     })).map(x => x.task);
 });
 
-export const updateTask = withAuthOrRedirect(async ({id,  update }: {id: number, update: Partial<InsertTask>} ): Promise<TaskWithInvolvements> => {
+export const updateTask = withAuthOrRedirect(async ({id,  update }: {id: number, update: Partial<InsertTask>} ): Promise<TaskWithRelations> => {
     
     await database.update(tasks).set(update).where(eq(tasks.id, id));
     const task = await database.query.tasks.findFirst({ 
         where: eq(tasks.id, id),
-        with: { involvements: true }
+        with: { associatedMongoDatabases: true }
     });
 
     if(!task) throw new Error(`Task with id ${id} not found`);

@@ -1,25 +1,24 @@
 "use client"
 
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAllBackupsForDatabase } from "@actions/backups";
 import { getAllMongoDatabases, addMongoDatabase, tryGetLatestTask } from "@actions/mongo";
 import { Backup } from "@backend/db/backup.schema";
 import { MongoDatabaseCensored, InsertMongoDatabase } from "@backend/db/mongo-database.schema";
-import { TaskWithInvolvements } from "@backend/db/task.schema";
+import { TaskWithRelations } from "@backend/db/task.schema";
 import useLocalStorageState from "use-local-storage-state"
 
 type QueryListEntry = {
     mongoDatabase: MongoDatabaseCensored,
     backups: Backup[],
-    latestTask?: TaskWithInvolvements
+    latestTask?: TaskWithRelations
 }
-
 
 const createMongoDatabaseListQueryClient = () => {
 
     const queryClient = useQueryClient();
-    const queryKey = ["backups", "mongo-databases", "tasks"];
+    const queryKey = ["backups", "mongo-databases", "tasks", "backup-policies"];
 
     const [skeletons, setSkeletonCount] = useLocalStorageState<number>("mongo-database-skeletons", {
         defaultValue: 0,
@@ -59,6 +58,7 @@ const createMongoDatabaseListQueryClient = () => {
             return {
                 mongoDatabase: newDatabase,
                 backups: [],
+                backupPolicies: [],
             } as QueryListEntry;
         },
         onSuccess: (newEntry) => {

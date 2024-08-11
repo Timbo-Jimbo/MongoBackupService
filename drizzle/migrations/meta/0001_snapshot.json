@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1fab0ee3-88f1-4e10-91d9-e73139f3f724",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "40dec42e-aea1-4090-9fb4-8456258c209e",
+  "prevId": "1fab0ee3-88f1-4e10-91d9-e73139f3f724",
   "tables": {
     "backup_policies": {
       "name": "backup_policies",
@@ -81,6 +81,13 @@
         },
         "mongo_database_id": {
           "name": "mongo_database_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "backup_policy_id": {
+          "name": "backup_policy_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
@@ -190,43 +197,6 @@
         "database_name": {
           "name": "database_name",
           "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
-    "mongo_database_to_backup_policies": {
-      "name": "mongo_database_to_backup_policies",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "mongo_database_id": {
-          "name": "mongo_database_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "backup_policy_id": {
-          "name": "backup_policy_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false

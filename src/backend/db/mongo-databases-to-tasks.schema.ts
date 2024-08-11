@@ -3,7 +3,7 @@ import { integer, sqliteTable, SQLiteUpdateSetSource, text } from "drizzle-orm/s
 import { mongoDatabases } from "./mongo-database.schema";
 import { tasks } from "./task.schema";
 
-export const mongoDatabaseTaskInvolvements = sqliteTable('mongo_database_task_involvements', {
+export const mongoDatabasesToTasks = sqliteTable('mongo_databases_to_tasks', {
     id: integer('id').primaryKey({autoIncrement: true}),
     mongoDatabaseId: integer('mongo_database_id').notNull(),
     taskId: integer('task_id').notNull(),
@@ -11,17 +11,17 @@ export const mongoDatabaseTaskInvolvements = sqliteTable('mongo_database_task_in
     createdAt: integer('created_at', {mode: 'timestamp'}).notNull().$default(() => new Date()),
 });
 
-export const mongoDatabaseTaskInvolvementsRelations = relations(mongoDatabaseTaskInvolvements, ( { one }) => ({
+export const mongoDatabasesToTasksRelations = relations(mongoDatabasesToTasks, ( { one }) => ({
     mongoDatabase: one(mongoDatabases, {
-        fields: [mongoDatabaseTaskInvolvements.mongoDatabaseId],
+        fields: [mongoDatabasesToTasks.mongoDatabaseId],
         references: [mongoDatabases.id]
     }),
     task: one(tasks, {
-        fields: [mongoDatabaseTaskInvolvements.taskId],
+        fields: [mongoDatabasesToTasks.taskId],
         references: [tasks.id]
     }),
 }));
 
-export type MongoDatabaseTaskInvolvement = typeof mongoDatabaseTaskInvolvements.$inferSelect;
-export type InsertMongoDatabaseTaskInvolvement = typeof mongoDatabaseTaskInvolvements.$inferInsert;
-export type UpdateMongoDatabaseTaskInvolvement = SQLiteUpdateSetSource<typeof mongoDatabaseTaskInvolvements>
+export type MongoDatabaseToTask = typeof mongoDatabasesToTasks.$inferSelect;
+export type InsertMongoDatabaseToTask = typeof mongoDatabasesToTasks.$inferInsert;
+export type UpdateMongoDatabaseToTask = SQLiteUpdateSetSource<typeof mongoDatabasesToTasks>

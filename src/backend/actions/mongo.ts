@@ -4,7 +4,7 @@ import { database } from "@backend/db";
 import { InsertMongoDatabase, MongoDatabase, MongoDatabaseCensored, mongoDatabases, MongoDatabaseConnection } from "@backend/db/mongo-database.schema";
 import { MongoClient } from "mongodb"
 import { desc, eq } from "drizzle-orm";
-import { Task, tasks, TaskType, TaskWithInvolvements } from "@backend/db/task.schema";
+import { Task, tasks, TaskType, TaskWithRelations } from "@backend/db/task.schema";
 import { TaskRunner } from "@backend/tasks/task-runner";
 import { censorMongoDbConnectionUri } from "@backend/utils";
 import { withAuthOrRedirect } from "./utils";
@@ -12,8 +12,8 @@ import { MongoBackupTaskExecutor } from "@backend/tasks/mongo-backup";
 import { backups } from "@backend/db/backup.schema";
 import { MongoRestoreExecutor } from "@backend/tasks/mongo-restore";
 import { MongoImportExecutor } from "@backend/tasks/mongo-import";
-import { mongoDatabaseTaskInvolvements } from "@backend/db/mongo-database-task-involvement.schema";
 import { BackupMode } from "@backend/tasks/compression.enums";
+import { mongoDatabasesToTasks } from "@backend/db/mongo-databases-to-tasks.schema";
 
 function censorMongoDatabase(mongoDatabase: MongoDatabase): MongoDatabaseCensored {
     
@@ -28,15 +28,15 @@ function censorMongoDatabase(mongoDatabase: MongoDatabase): MongoDatabaseCensore
     return result;
 }
 
-export const tryGetLatestTask =  async (mongoDatabaseId: number) : Promise<TaskWithInvolvements | undefined> => {
+export const tryGetLatestTask =  async (mongoDatabaseId: number) : Promise<TaskWithRelations | undefined> => {
     
-    const entry = await database.query.mongoDatabaseTaskInvolvements.findFirst({
-        where: eq(mongoDatabaseTaskInvolvements.mongoDatabaseId, mongoDatabaseId),
-        orderBy: [desc(mongoDatabaseTaskInvolvements.createdAt)],
+    const entry = await database.query.mongoDatabasesToTasks.findFirst({
+        where: eq(mongoDatabasesToTasks.mongoDatabaseId, mongoDatabaseId),
+        orderBy: [desc(mongoDatabasesToTasks.createdAt)],
         with: {
             task: {
                 with: {
-                    involvements: true
+                    associatedMongoDatabases: true
                 }
             }
         }
@@ -169,10 +169,16 @@ export const addMongoDatabase = withAuthOrRedirect(async (mongoDatabase: InsertM
     return censorMongoDatabase(insertedEntry[0]);
 });
 
-export const deleteMongoDatabase = withAuthOrRedirect(async (id: number) => {
+export const deleteMongoDatabase = withAuthOrRedirect(async (id: number, deleteBackups: boolean) => {
     
-    const exists = await database.query.mongoDatabases.findFirst({ where: eq(mongoDatabases.id, id) });
-    if(!exists) {
+    const mongoDatatbase = await database.query.mongoDatabases.findFirst({ 
+        where: eq(mongoDatabases.id, id),
+        with: {
+            backups: true,
+            associatedTasks: true
+        }
+    });
+    if(!mongoDatatbase) {
         return {
             success: false,
             message: `Mongo Database with id ${id} not found`
@@ -189,8 +195,12 @@ export const deleteMongoDatabase = withAuthOrRedirect(async (id: number) => {
     }
 
     await database.delete(mongoDatabases).where(eq(mongoDatabases.id, id));
-    await database.delete(mongoDatabaseTaskInvolvements).where(eq(mongoDatabaseTaskInvolvements.mongoDatabaseId, id));
-    await database.update(backups).set({mongoDatabaseId: null}).where(eq(backups.mongoDatabaseId, id));
+    await database.delete(mongoDatabasesToTasks).where(eq(mongoDatabasesToTasks.mongoDatabaseId, id));
+
+    if(!deleteBackups){
+        //just dis-associate the backups
+        await database.update(backups).set({mongoDatabaseId: null}).where(eq(backups.mongoDatabaseId, id));
+    }
 
     return {
         success: true,

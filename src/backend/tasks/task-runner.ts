@@ -1,7 +1,7 @@
 import { isMongoDatabaseBusyWithTask } from "@actions/mongo";
 import { database } from "@backend/db";
-import { InsertMongoDatabaseTaskInvolvement, mongoDatabaseTaskInvolvements } from "@backend/db/mongo-database-task-involvement.schema";
 import { MongoDatabase, MongoDatabaseAccess, mongoDatabases } from "@backend/db/mongo-database.schema";
+import { InsertMongoDatabaseToTask, mongoDatabasesToTasks } from "@backend/db/mongo-databases-to-tasks.schema";
 import { TaskProgress, TaskType, tasks, TaskState, ResolvedTaskState, TaskCancellationType } from "@backend/db/task.schema";
 import { humanReadableEnumString, runAndForget } from "@lib/utils";
 import { eq } from "drizzle-orm";
@@ -102,13 +102,13 @@ export class TaskRunner
 
       const taskId = insertResult[0].id;
 
-      const involvements: InsertMongoDatabaseTaskInvolvement[] = databases.map(({ mongoDatabaseId, involvementReason }) => ({
+      const connections: InsertMongoDatabaseToTask[] = databases.map(({ mongoDatabaseId, involvementReason }) => ({
         mongoDatabaseId,
         taskId: taskId,
         reason: involvementReason
       }));
 
-      await tx.insert(mongoDatabaseTaskInvolvements).values(involvements).returning();
+      await tx.insert(mongoDatabasesToTasks).values(connections).returning();
 
       return taskId;
     });

@@ -1,7 +1,7 @@
 import { deleteMongoDatabase, getMongoDatabaseConnectionStatus, startImport, startManualBackup, startRestore } from "@actions/mongo";
 import { Backup } from "@backend/db/backup.schema";
 import { MongoDatabaseCensored, MongoDatabaseConnection } from "@backend/db/mongo-database.schema";
-import { TaskWithInvolvements } from "@backend/db/task.schema";
+import { TaskWithRelations } from "@backend/db/task.schema";
 import { BackupMode } from "@backend/tasks/compression.enums";
 import { Alert, AlertDescription, AlertTitle } from "@comp/alert";
 import { AlertDialog, AlertDialogDescription, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
@@ -10,7 +10,7 @@ import { Button } from "@comp/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuPortal, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuLabel } from "@comp/dropdown-menu";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { toast, toastForActionResult } from "@comp/toasts";
-import { ArrowDownOnSquareIcon, ArrowPathIcon, InformationCircleIcon, PlusIcon, Square3Stack3DIcon, TrashIcon } from "@heroicons/react/20/solid";
+import { ArrowDownOnSquareIcon, ArrowPathIcon, InformationCircleIcon, Square3Stack3DIcon } from "@heroicons/react/20/solid";
 import { useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
 import { tryUseTaskListQueryClient } from "@lib/providers/task-list-query-client";
@@ -19,7 +19,8 @@ import { Cross2Icon, DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { DialogStartManualBackup } from "./dialog-start-manual-backup";
-import { DialogCreateBackupPolicy } from "./dialog-create-backup-policy";
+import { BackupPoliciesListQueryClientProvider } from "@lib/providers/backup-policies-list-query-client";
+import { BackupPoliciesList } from "@app/dashboard/backup-policy-list";
 
 type Ping = {
   isPending: boolean,
@@ -62,14 +63,14 @@ function WorkBadge({
   task
 }: {
   mongoDatabaseId: number,
-  task: TaskWithInvolvements | undefined
+  task: TaskWithRelations | undefined
 }) {
   return (
     <>
       {(task && !task.isComplete) && (
         <Badge variant={"outline"} className="animate-pulse">
           <LoadingSpinner className="w-4 h-4 mr-2" />
-          {task.involvements.find(i => i.mongoDatabaseId == mongoDatabaseId)?.reason ?? "Working on a task"}
+          {task.associatedMongoDatabases.find(i => i.mongoDatabaseId == mongoDatabaseId)?.reason ?? "Working on a task"}
         </Badge>
       )}
     </>
@@ -83,7 +84,7 @@ function Badges({
   className
 }: {
   mongoDatabase: MongoDatabaseCensored,
-  latestTask: TaskWithInvolvements | undefined
+  latestTask: TaskWithRelations | undefined
   ping: Ping,
   className?: string
 }) {
@@ -103,7 +104,7 @@ type OtherDatabase = {
 type MongoDatabaseCardProps = {
   mongoDatabase: MongoDatabaseCensored,
   ownBackups: Backup[],
-  latestTask?: TaskWithInvolvements
+  latestTask?: TaskWithRelations
   otherDatabases: OtherDatabase[],
 };
 
@@ -116,13 +117,12 @@ export function MongoDatabaseCard({
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [startManualBackupDialogOpen, setStartManualBackupDialogOpen] = useState(false);
-  const [addBackupPolicyDialogOpen, setAddBackupPolicyDialogOpen] = useState(false);
-  const mongoDatbaseListQueryClient = useMongoDatabaseListQueryClient();
+  const mongoDatabaseListQueryClient = useMongoDatabaseListQueryClient();
   const taskListQueryClient = tryUseTaskListQueryClient();
-  const backupQueryClient = useBackupListQueryClient();
+  const backupListQueryClient = useBackupListQueryClient();
 
   const dbStatusQuery = useQuery({
-    queryKey: [mongoDatbaseListQueryClient.queryKey, "status", mongoDatabase.id],
+    queryKey: [mongoDatabaseListQueryClient.queryKey, "status", mongoDatabase.id],
     queryFn: () => getMongoDatabaseConnectionStatus(mongoDatabase.id),
     refetchInterval: (query) => query.state.data?.connectionStatus != MongoDatabaseConnection.Online ? 5000 : 10000,
   })
@@ -135,7 +135,7 @@ export function MongoDatabaseCard({
 
       if(!result?.success) return;
       taskListQueryClient?.notifyTaskWasAdded();
-      mongoDatbaseListQueryClient.notifyDatabasesPotentiallyDirty();
+      mongoDatabaseListQueryClient.notifyDatabasesPotentiallyDirty();
     }
   });
 
@@ -147,7 +147,7 @@ export function MongoDatabaseCard({
 
       if(!result?.success) return;
       taskListQueryClient?.notifyTaskWasAdded();
-      mongoDatbaseListQueryClient.notifyDatabasesPotentiallyDirty();
+      mongoDatabaseListQueryClient.notifyDatabasesPotentiallyDirty();
     }
   });
 
@@ -159,24 +159,24 @@ export function MongoDatabaseCard({
 
       if(!result?.success) return;
       taskListQueryClient?.notifyTaskWasAdded();
-      mongoDatbaseListQueryClient.notifyDatabasesPotentiallyDirty();
+      mongoDatabaseListQueryClient.notifyDatabasesPotentiallyDirty();
     }
   });
 
   const deleteDatabaseMutation = useMutation({
-    mutationFn: async () => await deleteMongoDatabase(mongoDatabase.id),
+    mutationFn: async (deleteBackups: boolean) => await deleteMongoDatabase(mongoDatabase.id, deleteBackups),
     onSuccess: async (result) => {
 
       toastForActionResult(result);
 
       if(!result?.success) return;
 
-      mongoDatbaseListQueryClient.notifyDatabaseWasDeleted(mongoDatabase.id);
-      backupQueryClient?.notifyBackupsPotentiallyDirty();
+      mongoDatabaseListQueryClient.notifyDatabaseWasDeleted(mongoDatabase.id);
+      backupListQueryClient?.notifyBackupsPotentiallyDirty();
       taskListQueryClient?.notifyTasksPotentiallyDirty();
     }
   });
-  
+
   const ping = {
     isFetching: dbStatusQuery.isFetching,
     isPending: dbStatusQuery.isPending,
@@ -198,7 +198,7 @@ export function MongoDatabaseCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem disabled={backupQueryClient.availableBackupModesQuery.isPending} onClick={() => setStartManualBackupDialogOpen(true)}>
+                <DropdownMenuItem disabled={backupListQueryClient.availableBackupModesQuery.isPending} onClick={() => setStartManualBackupDialogOpen(true)}>
                   <Square3Stack3DIcon className="w-4 h-4 mr-2" />
                   Backup...
                 </DropdownMenuItem>
@@ -316,7 +316,7 @@ export function MongoDatabaseCard({
               </DropdownMenuContent>
             </DropdownMenu>
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <AlertGenericConfirmationDialogContent onConfirm={() => deleteDatabaseMutation.mutate()}>
+              <AlertGenericConfirmationDialogContent onConfirm={() => deleteDatabaseMutation.mutate(false)}>
                 <div className="flex flex-col gap-4">
                   <AlertDialogDescription>
                     Are you sure you want to remove this database?
@@ -348,7 +348,7 @@ export function MongoDatabaseCard({
 
                 setStartManualBackupDialogOpen(false);
               }}
-              supportedOptions={backupQueryClient?.availableBackupModesQuery.data ?? [BackupMode.Gzip]}
+              supportedOptions={backupListQueryClient?.availableBackupModesQuery.data ?? [BackupMode.Gzip]}
             />
         </div>
       </div>
@@ -356,13 +356,9 @@ export function MongoDatabaseCard({
       <div className="flex flex-row gap-2 place-items-center">
         <p className="text-sm text-muted-foreground">{mongoDatabase.censoredConnectionUri}</p>
       </div>
-      <div className="flex flex-row gap-2 place-items-center">
-        <Button variant={"outline"} onClick={() => setAddBackupPolicyDialogOpen(true)}>
-          <PlusIcon className="w-4 h-4 mr-2" />
-          Create Backup Policy
-        </Button>
-        <DialogCreateBackupPolicy supportedOptions={backupQueryClient.availableBackupModesQuery?.data ?? []} open={addBackupPolicyDialogOpen} onOpenChange={setAddBackupPolicyDialogOpen}/>
-      </div>
+      <BackupPoliciesListQueryClientProvider databaseId={mongoDatabase.id}>
+        <BackupPoliciesList />
+      </BackupPoliciesListQueryClientProvider>
     </div>
   );
 }

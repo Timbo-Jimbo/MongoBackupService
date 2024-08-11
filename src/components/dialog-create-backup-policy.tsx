@@ -19,10 +19,12 @@ enum CronValidation {
 
 export function DialogCreateBackupPolicy ({
   onOpenChange,
+  onCreatePolicy,
   open,
   supportedOptions
 }: {
   onOpenChange?: (open: boolean) => void;
+  onCreatePolicy: (cronExpression: string, retentionDays: number, mode: BackupMode) => void;
   open?: boolean;
   supportedOptions: BackupMode[];
 }) {
@@ -85,9 +87,11 @@ export function DialogCreateBackupPolicy ({
     nextRunDate = interval.next().toDate();
   } catch (e) {} 
 
+  const canCreate = cronValidation == CronValidation.Valid && selectedModeSupported && retentionDays !== undefined;
+
   return (
   <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl" onOpenAutoFocus={e => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Create Backup Policy</DialogTitle>
           <DialogDescription>
@@ -180,7 +184,7 @@ export function DialogCreateBackupPolicy ({
           </div>
         </div>
         <DialogFooter>
-          <Button disabled={cronValidation != CronValidation.Valid}><PlusIcon className="w-4 h-5 mr-2"/>Create Policy</Button>
+          <Button disabled={!canCreate} onClick={() => onCreatePolicy(cronExpression, retentionDays ?? 1, selectedMode)}><PlusIcon className="w-4 h-5 mr-2"/>Create Policy</Button>
         </DialogFooter>
       </DialogContent>
   </Dialog>
