@@ -361,7 +361,7 @@ export function MongoDatabaseCard({
           <PlusIcon className="w-4 h-4 mr-2" />
           Create Backup Policy
         </Button>
-        <DialogCreateBackupPolicy supportedOptions={backupQueryClient.availableBackupModesQuery?.data ?? []} open={addBackupPolicyDialogOpen} onOpenChange={setAddBackupPolicyDialogOpen} mongoDatabaseId={mongoDatabase.id}/>
+        <DialogCreateBackupPolicy supportedOptions={backupQueryClient.availableBackupModesQuery?.data ?? []} open={addBackupPolicyDialogOpen} onOpenChange={setAddBackupPolicyDialogOpen}/>
       </div>
     </div>
   );
