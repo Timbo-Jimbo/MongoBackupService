@@ -17,7 +17,14 @@ export const getAllTasksForDatabase = withAuthOrRedirect(async (mongoDatabaseId:
     return (await database.query.mongoDatabasesToTasks.findMany({
         where: eq(mongoDatabasesToTasks.mongoDatabaseId, mongoDatabaseId), 
         orderBy: [desc(mongoDatabasesToTasks.createdAt)],
-        with: { task: true }
+        with: { 
+            task: {
+                with: {
+                    associatedMongoDatabases: true,
+                    associatedBackupPolicy: true,
+                }
+            }
+        }
     })).map(x => x.task);
 });
 
