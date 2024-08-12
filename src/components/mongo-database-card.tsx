@@ -34,7 +34,7 @@ function ConnectionBadge({ping}: {ping: Ping}) {
   return (
     <>
       {ping.isPending && (
-        <Badge variant={"outline"} className="animate-pulse" key={"connection-badge"}>
+        <Badge variant={"outline"} className="animate-pulse flex-grow justify-center" key={"connection-badge"}>
           <div className="w-2 h-2 -ml-1 mr-2 bg-stone-500 rounded-full transition-all duration-500">
             <div className="size-full bg-stone-300 rounded-full animate-ping"></div>
           </div>
@@ -42,13 +42,13 @@ function ConnectionBadge({ping}: {ping: Ping}) {
         </Badge>
       )}
       {ping.result && ping.result == MongoDatabaseConnection.Online && (
-        <Badge variant={"secondary"} className="transition-all duration-500" key={"connection-badge"}>
+        <Badge variant={"secondary"} className="transition-all duration-500 flex-grow justify-center" key={"connection-badge"}>
           <div className="w-2 h-2 -ml-1 mr-2 bg-green-500 rounded-full transition-all duration-500" />
           Online
         </Badge>
       )}
       {ping.result && ping.result != MongoDatabaseConnection.Online && (
-        <Badge variant={"secondary"} className="transition-all duration-500" key={"connection-badge"}>
+        <Badge variant={"secondary"} className="transition-all duration-500 flex-grow justify-center" key={"connection-badge"}>
           <div className="w-2 h-2 -ml-1 mr-2 bg-red-500 rounded-full transition-all duration-500">
             <div className="size-full bg-rose-300 rounded-full animate-ping"></div>
           </div>
@@ -69,7 +69,7 @@ function WorkBadge({
   return (
     <>
       {(task && !task.isComplete) && (
-        <Badge variant={"outline"} className="animate-pulse">
+        <Badge variant={"outline"} className="animate-pulse flex-grow justify-center ">
           <LoadingSpinner className="w-4 h-4 mr-1 -ml-1" />
           {task.associatedMongoDatabases.find(i => i.mongoDatabaseId == mongoDatabaseId)?.reason ?? "Working on a task"}
         </Badge>
@@ -90,7 +90,7 @@ function Badges({
   className?: string
 }) {
   return (
-    <div className={cn(["flex flex-row gap-2", className])}>
+    <div className={cn(["flex flex-row gap-2 size-fit", className])}>
       <ConnectionBadge ping={ping}/>
       <WorkBadge mongoDatabaseId={mongoDatabase.id} task={latestTask}/>
     </div>

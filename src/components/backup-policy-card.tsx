@@ -32,9 +32,9 @@ function Badges({
   className?: string
 }) {
   return (
-    <div className={cn(["flex flex-row gap-2", className])}>
+    <div className={cn(["flex flex-row gap-2 size-fit", className])}>
       {backupPolicy.activeTask && !backupPolicy.activeTask.isComplete && (
-        <Badge variant={"outline"} className="animate-pulse">
+        <Badge variant={"outline"} className="flex-grow justify-center animate-pulse">
             <LoadingSpinner className="w-4 h-4 mr-1 -ml-1" />
             Running
         </Badge>
@@ -151,12 +151,17 @@ export function BackupPolicyCard({
             </AlertDialog>
           </div>
           <div className="w-full gap-4 grid grid-cols-2 lg:grid-cols-3 py-4">
-          <Statbox className="col-span-1" title="Next Run" stat={(backupPolicy.activeTask && !backupPolicy.activeTask.isComplete) ? "Running right now" : backupPolicy.nextBackupAt ? timeUntilString(backupPolicy.nextBackupAt) : "Never"} Icon={ArrowRightIcon} />
-          <Statbox className="col-span-1 capitalize" title="Mode" stat={humanReadableEnumString(backupPolicy.backupMode)} Icon={CogIcon} />
-          <Statbox className="col-span-1" title="Last Run" stat={backupPolicy.lastBackupAt ? timeAgoString(backupPolicy.lastBackupAt) : "Never"} Icon={ArrowUturnLeftIcon} />
-          <Statbox className="col-span-1" title="Retention" stat={`${backupPolicy.backupRetentionDays} days`} Icon={CalendarDaysIcon} />
-          <Statbox className="col-span-1" title="Backups" stat={backupPolicy.backups.length.toLocaleString()} Icon={Square3Stack3DIcon} />
-          <Statbox className="col-span-1" title="Total Size" stat={prettyBytes(backupPolicy.backups.reduce((sumBytes, backup) => { return sumBytes + backup.sizeBytes; }, 0))} Icon={ChartPieIcon} />
+          <Statbox className="col-span-1" title="Next Run" Icon={ArrowRightIcon}>
+            {backupPolicy.activeTask && !backupPolicy.activeTask.isComplete && "Running now"}
+            {(!backupPolicy.activeTask || backupPolicy.activeTask.isComplete) && (
+              backupPolicy.nextBackupAt ? timeUntilString(backupPolicy.nextBackupAt) : "Never"  
+            )}
+          </Statbox>
+          <Statbox className="col-span-1 capitalize" title="Mode" Icon={CogIcon}>{humanReadableEnumString(backupPolicy.backupMode)}</Statbox>
+          <Statbox className="col-span-1" title="Last Run" Icon={ArrowUturnLeftIcon}>{backupPolicy.lastBackupAt ? timeAgoString(backupPolicy.lastBackupAt) : "Never"}</Statbox>
+          <Statbox className="col-span-1" title="Retention" Icon={CalendarDaysIcon}>{`${backupPolicy.backupRetentionDays} days`}</Statbox>
+          <Statbox className="col-span-1" title="Backups" Icon={Square3Stack3DIcon}>{backupPolicy.backups.length.toLocaleString()}</Statbox>
+          <Statbox className="col-span-1" title="Total Size" Icon={ChartPieIcon}>{prettyBytes(backupPolicy.backups.reduce((sumBytes, backup) => { return sumBytes + backup.sizeBytes; }, 0))}</Statbox>
           </div>
         </div>
       </div>

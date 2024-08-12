@@ -1,5 +1,5 @@
 import { deleteTask, updateTask } from "@actions/tasks";
-import { Task, TaskCancellationType, TaskState } from "@backend/db/task.schema";
+import { Task, TaskCancellationType, TaskState, TaskWithRelations } from "@backend/db/task.schema";
 import { Badge } from "@comp/badge";
 import { Button } from "@comp/button";
 import { LoadingSpinner } from "@comp/loading-spinner";
@@ -20,18 +20,19 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Alert, AlertDescription, AlertTitle } from "@comp/alert";
 import { cn, humanReadableEnumString } from "@lib/utils";
 import { tryUseBackupPoliciesListQueryClient, useBackupPoliciesListQueryClient } from "@lib/providers/backup-policies-list-query-client";
+import { LinkIcon, SparklesIcon } from "@heroicons/react/16/solid";
 
 function Badges({
   task,
   className
 }: {
-  task: Task,
+  task: TaskWithRelations,
   className?: string
 }) {
   return (
     <div className={cn(["flex flex-row gap-2 size-fit", className])}>
       {!task.isComplete && (
-        <Badge variant={"outline"} className="animate-pulse" >
+        <Badge variant={"outline"} className="flex-grow justify-center animate-pulse" >
           Running
         </Badge>
       )}
@@ -43,10 +44,16 @@ function Badges({
           {humanReadableEnumString(task.state)}
         </Badge>
       )}
-      <Badge variant={"secondary"}>
+      <Badge variant={"secondary"} className="flex-grow justify-center">
         <ClockIcon className="w-4 h-4 mr-1 -ml-1" />
         <DurationDisplay startTime={task.startedAt} endTime={() => task.completedAt ?? new Date()} />
       </Badge>
+      {task.associatedBackupPolicy && (
+        <Badge variant={"secondary"} className="flex-grow justify-center">
+          <SparklesIcon className="w-4 h-4 mr-1 -ml-1" />
+          Triggered by Policy 
+        </Badge>
+      )}
     </div>
   );
 }
@@ -54,7 +61,7 @@ function Badges({
 export function TaskCard({
   task,
 }: {
-  task: Task,
+  task: TaskWithRelations,
 }) {
   
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -162,6 +169,9 @@ export function TaskCard({
                         )}
                       </AlertDialogDescription>
                       <AlertDialogFooter>
+                        <AlertDialogCancel>
+                          Cancel
+                        </AlertDialogCancel>
                         <AlertDialogAction 
                           destructive={task.cancellationType == TaskCancellationType.DangerousToCancel}
                           onClick={() => {
@@ -175,9 +185,6 @@ export function TaskCard({
                         >
                           {task.cancellationType == TaskCancellationType.DangerousToCancel ? "Confirm (I know what I am doing)" : "Confirm"}
                         </AlertDialogAction>
-                        <AlertDialogCancel>
-                          Cancel
-                        </AlertDialogCancel>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>

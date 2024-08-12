@@ -153,12 +153,12 @@ const AlertGenericConfirmationDialogContent = ({
       </AlertDialogHeader>
       {children}
       <AlertDialogFooter>
-        <AlertDialogAction onClick={onConfirm} destructive={destructive}>
-          {positiveButtonLabel}
-        </AlertDialogAction>
         <AlertDialogCancel onClick={onCancel}>
           {negativeButtonLabel}
         </AlertDialogCancel>
+        <AlertDialogAction onClick={onConfirm} destructive={destructive}>
+          {positiveButtonLabel}
+        </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   )

@@ -30,45 +30,45 @@ function Badges({
   className?: string
 }) {
   return (
-    <div className={cn(["flex flex-row gap-2", className])}>
+    <div className={cn(["flex flex-row gap-2 size-fit", className])}>
       {!backup.backupPolicyId && (
-        <Badge variant={"secondary"} className="size-fit">
+        <Badge variant={"secondary"} className="flex-grow justify-center ">
           <CursorArrowRaysIcon className="w-4 h-4 mr-1 -ml-1" />
           Created Manually
         </Badge>
       )}
       {backup.backupPolicyId && (
-        <Badge variant={"secondary"} className="size-fit">
+        <Badge variant={"secondary"} className="flex-grow justify-center ">
           <SparklesIcon className="w-4 h-4 mr-1 -ml-1" />
           Created by Policy 
         </Badge>
       )}
       {backup.backupPolicyId && backup.backupPolicy && (
         <>
-          <Badge variant={"secondary"} className="size-fit">
+          <Badge variant={"secondary"} className="flex-grow justify-center ">
             <LinkIcon className="w-4 h-4 mr-1 -ml-1" />
             {backup.backupPolicy.referenceName}
           </Badge>
-          <Badge variant={"destructive"} className="size-fit">
+          <Badge variant={"destructive"} className="flex-grow justify-center ">
             <TrashIcon className="w-4 h-4 mr-1 -ml-1" />
             {shortHumanizeDuration((backup.finishedAt.getTime() + backup.backupPolicy.backupRetentionDays * 86400000) - Date.now())}
           </Badge>
           </>
       )}
       {backup.backupPolicyId && !backup.backupPolicy && (
-        <Badge variant={"destructive"} className="size-fit">
+        <Badge variant={"destructive"} className="flex-grow justify-center ">
           <LinkSlashIcon className="w-4 h-4 mr-1 -ml-1" />
           Associated Policy Deleted
         </Badge>
       )}
       {backup.mongoDatabaseId && backup.mongoDatabase && (
-        <Badge variant={"secondary"} className="size-fit">
+        <Badge variant={"secondary"} className="flex-grow justify-center ">
           <LinkIcon className="w-4 h-4 mr-1 -ml-1" />
           {backup.mongoDatabase.referenceName}
         </Badge>
       )}
       {backup.mongoDatabaseId && !backup.mongoDatabase && (
-        <Badge variant={"destructive"} className="size-fit">
+        <Badge variant={"destructive"} className="flex-grow justify-center ">
           <LinkSlashIcon className="w-4 h-4 mr-1 -ml-1" />
           Associated Database Removed
         </Badge>
@@ -155,14 +155,12 @@ export function BackupCard({
           </div>
           <Badges className="inline-flex flex-wrap lg:hidden" backup={backup} />
           <div className="w-full gap-4 grid grid-cols-2 lg:grid-cols-3 py-4">
-            <Statbox className="col-span-1" title="Database Name" stat={backup.sourceMetadata.databaseName} Icon={Square3Stack3DIcon} />
-            <Statbox className="col-span-1" title="Documents" stat={backup.sourceMetadata.collections.reduce((acc, c) => acc + c.documentCount, 0).toLocaleString()} Icon={DocumentIcon} />
-            <Statbox className="col-span-1" title="Collections" stat={backup.sourceMetadata.collections.length.toLocaleString()} Icon={TableCellsIcon} />
-            <Statbox className="col-span-1" title="Completed In" stat={humanizeDuration(msToComplete)} Icon={ClockIcon} />
-            <Statbox className="col-span-1 capitalize" title="Mode" stat={humanReadableEnumString(backup.mode)} Icon={CogIcon} />
-            <Statbox className="col-span-1" title="Size" stat={`${prettyBytes(backup.sizeBytes)}`} Icon={ChartPieIcon} />
-            {/* <Statbox className="col-span-1" title="Trigger" stat={backup.backupPolicy ? "Backup Policy" : "Manual"} Icon={CogIcon} /> */}
-            {/* <Statbox className="col-span-1" title="Backup Rate" stat={} Icon={ChartPieIcon} /> */}
+            <Statbox className="col-span-1" title="Database Name" Icon={Square3Stack3DIcon}>{backup.sourceMetadata.databaseName}</Statbox>
+            <Statbox className="col-span-1" title="Documents" Icon={DocumentIcon}>{backup.sourceMetadata.collections.reduce((acc, c) => acc + c.documentCount, 0).toLocaleString()}</Statbox>
+            <Statbox className="col-span-1" title="Collections" Icon={TableCellsIcon}>{backup.sourceMetadata.collections.length.toLocaleString()}</Statbox>
+            <Statbox className="col-span-1" title="Completed In" Icon={ClockIcon}>{humanizeDuration(msToComplete)}</Statbox>
+            <Statbox className="col-span-1 capitalize" title="Mode" Icon={CogIcon}>{humanReadableEnumString(backup.mode)}</Statbox>
+            <Statbox className="col-span-1" title="Size" Icon={ChartPieIcon}>{`${prettyBytes(backup.sizeBytes)}`}</Statbox>
           </div>
         </div>
       </div>

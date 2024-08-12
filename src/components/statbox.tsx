@@ -3,22 +3,22 @@ import { cn } from "@lib/utils";
 interface StatboxProps {
     Icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
     title: string;
-    stat: string;
     className?: string;
+    children?: React.ReactNode;
 }
   
 export const Statbox: React.FC<StatboxProps> = ({
     title,
-    stat,
     Icon,
-    className
+    className,
+    children
 }) => {
     return (
         <div className={cn(["flex flex-row shrink-0 place-items-center", className])}>
             {Icon && <Icon className="w-8 h-8 mr-3" />}
             <div className="flex flex-col gap-0">
                 <span className="text-muted-foreground text-xs">{title}</span>
-                {stat} 
+                {children} 
             </div>
         </div>
     );
