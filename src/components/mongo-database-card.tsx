@@ -126,7 +126,7 @@ export function MongoDatabaseCard({
   const dbStatusQuery = useQuery({
     queryKey: [mongoDatabaseListQueryClient.queryKey, "status", mongoDatabase.id],
     queryFn: () => getMongoDatabaseConnectionStatus(mongoDatabase.id),
-    refetchInterval: (query) => query.state.data?.connectionStatus != MongoDatabaseConnection.Online ? 5000 : 10000,
+    refetchInterval: (query) => query.state.data?.connectionStatus != MongoDatabaseConnection.Online ? 5000 : false,
   })
 
   const startBackupMutation = useMutation({

@@ -36,7 +36,8 @@ export const tryGetLatestTask =  async (mongoDatabaseId: number) : Promise<TaskW
         with: {
             task: {
                 with: {
-                    associatedMongoDatabases: true
+                    associatedMongoDatabases: true,
+                    associatedBackupPolicy: true
                 }
             }
         }

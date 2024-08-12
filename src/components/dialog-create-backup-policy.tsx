@@ -54,6 +54,7 @@ export function DialogCreateBackupPolicy ({
       let lastDate = new Date();
       let sumIntervals = 0;
       let countIntervals = 0;
+      
       interval.iterate(10, (date, index) => {
         
         if (index > 0) {
@@ -63,6 +64,7 @@ export function DialogCreateBackupPolicy ({
 
         lastDate = date.toDate();
       });
+      interval.reset();
 
       // Calculate average interval
       const averageInterval = sumIntervals / countIntervals;

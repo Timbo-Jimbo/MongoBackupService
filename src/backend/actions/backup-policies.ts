@@ -8,17 +8,34 @@ import { mongoDatabases } from "@backend/db/mongo-database.schema";
 import { backups } from "@backend/db/backup.schema";
 import { deleteBackup } from "./backups";
 import { TaskScheduler } from "@backend/tasks/task-scheduler";
+import cronParser from "cron-parser";
 
 export const getAllBackupPoliciesForDatabase = withAuthOrRedirect(async (mongoDatabaseId: number) => {
-    return (await database.query.mongoDatabases.findFirst({ where: eq(mongoDatabases.id, mongoDatabaseId), with: { backupPolicies: true } }))?.backupPolicies || [];
+    return (await database.query.mongoDatabases.findFirst({ 
+        where: eq(mongoDatabases.id, mongoDatabaseId), 
+        with: { 
+            backupPolicies: {
+                with: {
+                    activeTask: true
+                }
+            }
+        }
+    }))?.backupPolicies || [];
 });
 
 export const getAllBackupPolicies = withAuthOrRedirect(async () => {
-    return await database.query.backupPolicies.findMany({ orderBy: [desc(backupPolicies.id)] });
+    return await database.query.backupPolicies.findMany({ 
+        orderBy: [desc(backupPolicies.id)],
+        with: { 
+            activeTask: true
+        }
+     });
 });
 
 export const createBackupPolicy = withAuthOrRedirect(async (backupPolicyValues:InsertBackupPolicy) => {
 
+    const interval = cronParser.parseExpression(backupPolicyValues.backupIntervalCron);
+    backupPolicyValues.nextBackupAt = interval.hasNext() ? new Date(interval.next().getTime()) : null;
     const [ newPolicy ] =  await database.insert(backupPolicies).values([backupPolicyValues]).returning();
 
     TaskScheduler.scheduleRun(newPolicy);

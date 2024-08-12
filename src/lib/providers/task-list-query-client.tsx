@@ -11,7 +11,7 @@ type QueryListEntry = TaskWithRelations;
 
 const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
 
-    const queryKey = [`tasks-${mongoDatabaseId !== undefined ? `mdb_${mongoDatabaseId}` : 'all'}`];
+    const queryKey = ['tasks', `tasks-${mongoDatabaseId !== undefined ? `mdb_${mongoDatabaseId}` : 'all'}`];
     const queryClient = useQueryClient();
 
     const [skeletons, setSkeletonCount] = useLocalStorageState<number>(`${queryKey[0]}-skeletons`, {
@@ -55,8 +55,9 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
 
     const notifyTasksPotentiallyDirty = () => {
         queryClient.invalidateQueries({
-            queryKey: queryKey,
-            exact: false
+            queryKey: [queryKey[0]],
+            exact: false,
+            refetchType: "all"
         });
     }
 

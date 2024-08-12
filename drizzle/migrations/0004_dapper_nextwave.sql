@@ -1,0 +1,1 @@
+ALTER TABLE `backup_policies` ADD `active_task_id` integer;

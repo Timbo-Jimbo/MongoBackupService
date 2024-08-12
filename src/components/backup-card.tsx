@@ -34,6 +34,9 @@ function Badges({
       <Badge variant={"secondary"} className="capitalize">
       <span className="opacity-50 mr-1">Mode</span>{humanReadableEnumString(backup.mode)}
       </Badge>
+      <Badge variant={"secondary"}>
+        <span className="opacity-50 mr-1">Trigger</span> {backup.backupPolicyId ? "Policy" : "Manual"}
+      </Badge>
     </div>
   );
 }

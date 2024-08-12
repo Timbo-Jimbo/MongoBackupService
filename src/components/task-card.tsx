@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@comp/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@comp/alert";
 import { cn, humanReadableEnumString } from "@lib/utils";
+import { tryUseBackupPoliciesListQueryClient, useBackupPoliciesListQueryClient } from "@lib/providers/backup-policies-list-query-client";
 
 function Badges({
   task,
@@ -61,6 +62,7 @@ export function TaskCard({
   const taskListQueryClient = useTaskListQueryClient();
   const mongoDatabaseListQueryClient = tryUseMongoDatabaseListQueryClient();
   const backupListQueryClient = tryUseBackupListQueryClient();
+  const backupPolicyListQueryClient = tryUseBackupPoliciesListQueryClient();
 
   //hack to detect task transitioning into complete state..!
 
@@ -72,6 +74,7 @@ export function TaskCard({
     if(task.state !== TaskState.Running)
     {
       mongoDatabaseListQueryClient?.notifyDatabasesPotentiallyDirty();
+      backupPolicyListQueryClient?.notifyBackupPoliciesPotentiallyDirty();
       backupListQueryClient?.notifyBackupsPotentiallyDirty();
     }
 

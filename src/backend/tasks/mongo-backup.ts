@@ -11,6 +11,7 @@ import { BackupCompressionFormat, BackupMode } from "./compression.enums";
 import { backupPolicies, BackupPolicy } from "@backend/db/backup-policy.schema";
 import { eq } from "drizzle-orm";
 import { TaskScheduler } from "./task-scheduler";
+import cronParser from "cron-parser";
 
 export const MongoBackupFolder = "data/backups";
 
@@ -186,8 +187,10 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
         {
             if(backupPolicy){
                 
+                const interval = cronParser.parseExpression(backupPolicy.backupIntervalCron);
                 [ backupPolicy ] = await database.update(backupPolicies).set({
                     lastBackupAt: new Date(),
+                    nextBackupAt: interval.hasNext() ? new Date(interval.next().getTime()) : null,
                 }).where(eq(backupPolicies.id, backupPolicy.id)).returning();
 
                 await TaskScheduler.scheduleRun(backupPolicy);

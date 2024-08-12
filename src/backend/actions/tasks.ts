@@ -5,11 +5,12 @@ import { InsertTask, tasks, TaskWithRelations } from "@backend/db/task.schema";
 import { desc, eq, inArray } from "drizzle-orm";
 import { withAuthOrRedirect } from "./utils";
 import { mongoDatabasesToTasks } from "@backend/db/mongo-databases-to-tasks.schema";
+import { backupPolicies } from "@backend/db/backup-policy.schema";
 
 export const getAllTasks = withAuthOrRedirect(async (refreshIds?: number[] | undefined): Promise<TaskWithRelations[]> => {
     
-    if(refreshIds) return await database.query.tasks.findMany({ where: inArray(tasks.id, refreshIds), orderBy: [desc(tasks.id)], with: {associatedMongoDatabases: true} });
-    return await database.query.tasks.findMany({ orderBy: [desc(tasks.id)], with: { associatedMongoDatabases: true} });
+    if(refreshIds) return await database.query.tasks.findMany({ where: inArray(tasks.id, refreshIds), orderBy: [desc(tasks.id)], with: {associatedMongoDatabases: true, associatedBackupPolicy: true} });
+    return await database.query.tasks.findMany({ orderBy: [desc(tasks.id)], with: { associatedMongoDatabases: true, associatedBackupPolicy: true} });
 });
 
 export const getAllTasksForDatabase = withAuthOrRedirect(async (mongoDatabaseId: number) => {
@@ -25,7 +26,10 @@ export const updateTask = withAuthOrRedirect(async ({id,  update }: {id: number,
     await database.update(tasks).set(update).where(eq(tasks.id, id));
     const task = await database.query.tasks.findFirst({ 
         where: eq(tasks.id, id),
-        with: { associatedMongoDatabases: true }
+        with: { 
+            associatedMongoDatabases: true,
+            associatedBackupPolicy: true
+        }
     });
 
     if(!task) throw new Error(`Task with id ${id} not found`);
@@ -34,7 +38,11 @@ export const updateTask = withAuthOrRedirect(async ({id,  update }: {id: number,
 });
 
 export const deleteTask = withAuthOrRedirect(async (id: number) => {
+
     await database.delete(tasks).where(eq(tasks.id, id));
+    await database.delete(mongoDatabasesToTasks).where(eq(mongoDatabasesToTasks.taskId, id));
+    await database.update(backupPolicies).set({ activeTaskId: null }).where(eq(backupPolicies.activeTaskId, id));
+
     return { success: true, message: `Cleared task` };
 });
 

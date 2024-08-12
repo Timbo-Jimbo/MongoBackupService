@@ -10,7 +10,7 @@ type QueryListEntry = Backup;
 
 const createBackupListQueryClient = (mongoDatabaseId: number | undefined) => {
 
-    const queryKey = [`backups-${mongoDatabaseId !== undefined ? `mdb_${mongoDatabaseId}` : 'all'}`];
+    const queryKey = ['backups', `backups-${mongoDatabaseId !== undefined ? `mdb_${mongoDatabaseId}` : 'all'}`];
 
     const [skeletons, setSkeletonCount] = useLocalStorageState<number>(`${queryKey[0]}-skeletons`, {
         defaultValue: 0,
@@ -43,8 +43,9 @@ const createBackupListQueryClient = (mongoDatabaseId: number | undefined) => {
 
     const notifyBackupsPotentiallyDirty = () => {
         queryClient.invalidateQueries({
-            queryKey: queryKey,
-            exact: false
+            queryKey: [queryKey[0]],
+            exact: false,
+            refetchType: "all"
         });
     }
 

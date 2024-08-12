@@ -14,7 +14,7 @@ import { useBackupListQueryClient } from "@lib/providers/backup-list-query-clien
 import { useBackupPoliciesListQueryClient } from "@lib/providers/backup-policies-list-query-client";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useMutation } from "@tanstack/react-query";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useState } from "react";
 import { toast } from "sonner";
 
 export function BackupPoliciesList() {

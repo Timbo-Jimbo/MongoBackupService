@@ -73,8 +73,9 @@ const createMongoDatabaseListQueryClient = () => {
 
     const notifyDatabasesPotentiallyDirty = () => {
         queryClient.invalidateQueries({
-            queryKey: queryKey,
-            exact: false
+            queryKey: [queryKey[0]],
+            exact: false,
+            refetchType: "all"
         });
     }
 

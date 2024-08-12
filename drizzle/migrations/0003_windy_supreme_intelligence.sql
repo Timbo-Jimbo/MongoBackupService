@@ -1,0 +1,1 @@
+ALTER TABLE `backup_policies` ADD `next_backup_at` integer;

@@ -1,23 +1,22 @@
 "use client"
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import useLocalStorageState from "use-local-storage-state";
-import { BackupPolicy } from "@backend/db/backup-policy.schema";
+import { BackupPolicy, BackupPolicyWithActiveTask } from "@backend/db/backup-policy.schema";
 import { getAllBackupPolicies, getAllBackupPoliciesForDatabase } from "@actions/backup-policies";
 
-type QueryListEntry = BackupPolicy;
+type QueryListEntry = BackupPolicyWithActiveTask;
 
 const createBackupPoliciesListQueryClient = (mongoDatabaseId: number | undefined) => {
 
-    const queryKey = [`backup-policies-${mongoDatabaseId !== undefined ? `mdb_${mongoDatabaseId}` : 'all'}`];
+    const queryKey = ['backup-policies', `backup-policies-${mongoDatabaseId !== undefined ? `mdb_${mongoDatabaseId}` : 'all'}`];
 
     const [skeletons, setSkeletonCount] = useLocalStorageState<number>(`${queryKey[0]}-skeletons`, {
         defaultValue: 0,
     });
 
     const queryClient = useQueryClient();
-
     const getAllQuery = useQuery({
         queryKey: queryKey,
         queryFn: async () => {
@@ -25,11 +24,24 @@ const createBackupPoliciesListQueryClient = (mongoDatabaseId: number | undefined
             setSkeletonCount(allPolicies?.length ?? 0);
             return allPolicies ?? [];
         },
+        refetchInterval: (query) =>{
+            const timeUntilNextBackup = query.state.data?.reduce((soonestTimeUntilBackup, policy) => {
+                if(!policy.nextBackupAt) return soonestTimeUntilBackup;
+                const next = (new Date(policy.nextBackupAt)).getTime();
+                const timeUntilNext = next - Date.now();
+                return (soonestTimeUntilBackup === undefined || timeUntilNext < soonestTimeUntilBackup) ? timeUntilNext : soonestTimeUntilBackup;
+            }, undefined as number | undefined);
+
+            return timeUntilNextBackup === undefined ? false : timeUntilNextBackup;
+        }
     });
 
     const notifyBackupPolicyWasAdded = (policy: BackupPolicy) => {
         queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
-            const newEntries = [...entries, policy];
+            const newEntries = [...entries, {
+                ...policy,
+                activeTask: null
+            }];
             setSkeletonCount(newEntries.length);
             return newEntries;
         });
@@ -45,8 +57,9 @@ const createBackupPoliciesListQueryClient = (mongoDatabaseId: number | undefined
 
     const notifyBackupPoliciesPotentiallyDirty = () => {
         queryClient.invalidateQueries({
-            queryKey: queryKey,
-            exact: false
+            queryKey: [queryKey[0]],
+            exact: false,
+            refetchType: "all"
         });
     }
 

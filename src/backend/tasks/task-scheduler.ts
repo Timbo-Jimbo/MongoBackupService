@@ -36,18 +36,22 @@ export class TaskScheduler {
 
                 console.log(`Running backup policy ${backupPolicy.id}...`);
 
-                await TaskRunner.startTask({
+                const startTaskResult = await TaskRunner.startTask({
                     taskType: TaskType.ScheduledBackup,
                     executorClass: MongoBackupTaskExecutor,
                     databases: [{
                         mongoDatabaseId: backupPolicy.mongoDatabaseId,
-                        involvementReason: 'Performing Backup (Scheduled)'
+                        involvementReason: 'Performing Backup (Policy)'
                     }],
                     executorParams: {
                         backupMode: backupPolicy.backupMode,
                         backupPolicy: refreshedBackupPolicy
                     }
                 });
+
+                await database.update(backupPolicies).set({
+                    activeTaskId: startTaskResult.taskId
+                }).where(eq(backupPolicies.id, backupPolicy.id));
 
             }, timeTillNextRun);
             this.backupPolicyIdToScheduledTask.set(backupPolicy.id, timeoutId);

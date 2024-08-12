@@ -2,6 +2,7 @@ import { sqliteStringEnum } from "@backend/utils";
 import { Relation, relations } from "drizzle-orm";
 import { integer, sqliteTable, SQLiteUpdateSetSource, text } from "drizzle-orm/sqlite-core";
 import { MongoDatabaseToTask, mongoDatabasesToTasks } from "./mongo-databases-to-tasks.schema";
+import { backupPolicies, BackupPolicy } from "./backup-policy.schema";
 
 export enum ResolvedTaskState {
     Completed = 'completed',
@@ -56,19 +57,21 @@ export const tasks = sqliteTable('tasks', {
     progress: text('progress', {mode: 'json'}).$type<TaskProgress>(),
     startedAt: integer('started_at', {mode: 'timestamp'}).notNull().$default(() => new Date()),
     updatedAt: integer('updated_at', {mode: 'timestamp'}).notNull().$default(() => new Date()).$onUpdate(() => new Date()),
-    completedAt: integer('completed_at', {mode: 'timestamp'})
+    completedAt: integer('completed_at', {mode: 'timestamp'}),
 });
 
-type TaskRelations<T> = {
-    associatedMongoDatabases: T;
+type TaskRelations<TMongoDatabase, TBackupPolicy> = {
+    associatedMongoDatabases: TMongoDatabase;
+    associatedBackupPolicy: TBackupPolicy;
 }
 
-export const tasksRelations = relations(tasks, ({ many }) => ({
+export const tasksRelations = relations(tasks, ({ many, one }) => ({
     associatedMongoDatabases: many(mongoDatabasesToTasks),
-} satisfies TaskRelations<Relation>));
+    associatedBackupPolicy: one(backupPolicies),
+} satisfies TaskRelations<Relation, Relation>));
 
 
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = typeof tasks.$inferInsert;
 export type UpdateTask = SQLiteUpdateSetSource<typeof tasks>
-export type TaskWithRelations = Task & TaskRelations<MongoDatabaseToTask[]>
+export type TaskWithRelations = Task & TaskRelations<MongoDatabaseToTask[], BackupPolicy | null>;
