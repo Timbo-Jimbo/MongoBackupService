@@ -64,7 +64,7 @@ export function DialogCreateBackupPolicy ({
 
         lastDate = date.toDate();
       });
-      interval.reset();
+      
 
       // Calculate average interval
       const averageInterval = sumIntervals / countIntervals;
@@ -81,6 +81,8 @@ export function DialogCreateBackupPolicy ({
       }
       else
       {
+        interval.reset(new Date());
+
         return {
           result: CronValidation.Valid,
           alertTitle: cronString,
