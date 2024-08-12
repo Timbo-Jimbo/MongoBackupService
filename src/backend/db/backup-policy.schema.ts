@@ -12,7 +12,6 @@ export const backupPolicies = sqliteTable('backup_policies', {
     backupRetentionDays: integer('backup_retention_days').notNull(),
     backupMode: text('backup_mode', sqliteStringEnum(BackupMode)).notNull().$type<BackupMode>(),
     lastBackupAt: integer('last_backup_at', {mode: 'timestamp'}),
-    nextBackupAt: integer('next_backup_at', {mode: 'timestamp'}),
     createdAt: integer('created_at', {mode: 'timestamp'}).notNull().$default(() => new Date()),
 });
 

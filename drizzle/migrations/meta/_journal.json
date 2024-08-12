@@ -15,6 +15,13 @@
       "when": 1723377844535,
       "tag": "0001_chubby_the_santerians",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1723429925093,
+      "tag": "0002_slow_major_mapleleaf",
+      "breakpoints": true
     }
   ]
 }

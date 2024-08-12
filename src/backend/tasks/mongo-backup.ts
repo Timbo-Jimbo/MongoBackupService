@@ -8,16 +8,20 @@ import { backups } from "@backend/db/backup.schema";
 import { Compression, MongodumpOutputProgressExtractor, getCollectionMetadata } from "./mongo-utils";
 import { runProcess, runProcessesPiped } from "@lib/process";
 import { BackupCompressionFormat, BackupMode } from "./compression.enums";
+import { backupPolicies, BackupPolicy } from "@backend/db/backup-policy.schema";
+import { eq } from "drizzle-orm";
+import { TaskScheduler } from "./task-scheduler";
 
 export const MongoBackupFolder = "data/backups";
 
 export type Params = {
     backupMode?: BackupMode;
+    backupPolicy?: BackupPolicy
 }
 
 export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
     
-    async execute(commands: TaskCommands, databases: MongoDatabaseAccess[], { backupMode = BackupMode.Balanced } : Params): Promise<TaskExecuteResult> {
+    async execute(commands: TaskCommands, databases: MongoDatabaseAccess[], { backupMode = BackupMode.Balanced, backupPolicy } : Params): Promise<TaskExecuteResult> {
 
         const targetDatabase = databases[0];
         const startedAt = new Date();
@@ -141,7 +145,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
             await commands.setCancellationType(TaskCancellationType.NotCancellable);
             await commands.reportProgress({ hasProgressValues: false,  message: "Recording backup entry" });
             
-            await database.insert(backups).values([{
+            const [ newBackup ] = await database.insert(backups).values([{
                 mongoDatabaseId: targetDatabase.id,
                 archivePath: backupArchivePath,
                 sizeBytes: statSync(backupArchivePath).size,
@@ -149,6 +153,7 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
                 mode: backupMode,
                 startedAt: startedAt,
                 finishedAt: new Date(),
+                backupPolicyId: backupPolicy?.id,
                 sourceMetadata: {
                     databaseName: targetDatabase.databaseName,
                     collections: collectionMetadata.map(cw => ({
@@ -156,7 +161,11 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
                         documentCount: cw.totalCount,
                     })),
                 },
-            }]);
+            }]).returning();
+
+            if(backupPolicy) {
+                TaskScheduler.scheduleDelete(backupPolicy, newBackup);
+            }
         
             return { 
                 resolvedState: ResolvedTaskState.Completed, 
@@ -172,6 +181,17 @@ export class MongoBackupTaskExecutor implements TaskExecutor<Params> {
             }
 
             throw e;
+        }
+        finally
+        {
+            if(backupPolicy){
+                
+                [ backupPolicy ] = await database.update(backupPolicies).set({
+                    lastBackupAt: new Date(),
+                }).where(eq(backupPolicies.id, backupPolicy.id)).returning();
+
+                await TaskScheduler.scheduleRun(backupPolicy);
+            }
         }
     }
 

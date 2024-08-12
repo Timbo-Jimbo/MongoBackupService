@@ -17,10 +17,11 @@ import { tryUseTaskListQueryClient } from "@lib/providers/task-list-query-client
 import { cn, timeAgoString } from "@lib/utils";
 import { Cross2Icon, DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { DialogStartManualBackup } from "./dialog-start-manual-backup";
 import { BackupPoliciesListQueryClientProvider } from "@lib/providers/backup-policies-list-query-client";
 import { BackupPoliciesList } from "@app/dashboard/backup-policy-list";
+import { useLoadingToastCleaner } from "@lib/use-toast-cleaner";
 
 type Ping = {
   isPending: boolean,
@@ -120,6 +121,7 @@ export function MongoDatabaseCard({
   const mongoDatabaseListQueryClient = useMongoDatabaseListQueryClient();
   const taskListQueryClient = tryUseTaskListQueryClient();
   const backupListQueryClient = useBackupListQueryClient();
+  const loadingToastRef = useLoadingToastCleaner();
 
   const dbStatusQuery = useQuery({
     queryKey: [mongoDatabaseListQueryClient.queryKey, "status", mongoDatabase.id],
@@ -316,7 +318,16 @@ export function MongoDatabaseCard({
               </DropdownMenuContent>
             </DropdownMenu>
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <AlertGenericConfirmationDialogContent onConfirm={() => deleteDatabaseMutation.mutate(false)}>
+              <AlertGenericConfirmationDialogContent onConfirm={() => {
+                loadingToastRef.current = toast.loading("Deleting database...");
+                deleteDatabaseMutation.mutate(true, {
+                  onSettled: () => {
+                    toast.dismiss(loadingToastRef.current);
+                  }
+                });
+
+                setDeleteDialogOpen(false);
+              }}>
                 <div className="flex flex-col gap-4">
                   <AlertDialogDescription>
                     Are you sure you want to remove this database?

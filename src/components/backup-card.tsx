@@ -16,6 +16,7 @@ import { DurationDisplay } from "./time-since-display";
 import { Badge } from "@comp/badge";
 import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
 import Link from "next/link";
+import { useLoadingToastCleaner } from "@lib/use-toast-cleaner";
 
 function Badges({
   backup,
@@ -31,7 +32,7 @@ function Badges({
         <DurationDisplay startTime={backup.startedAt} endTime={backup.finishedAt} />
       </Badge>
       <Badge variant={"secondary"} className="capitalize">
-        {humanReadableEnumString(backup.mode)}<span className="opacity-50 ml-1">Mode</span>
+      <span className="opacity-50 mr-1">Mode</span>{humanReadableEnumString(backup.mode)}
       </Badge>
     </div>
   );
@@ -69,6 +70,7 @@ export function BackupCard({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const backupListQueryClient = useBackupListQueryClient(); 
   const mongoDatabaseListQueryClient = useMongoDatabaseListQueryClient();
+  const loadingToastRef = useLoadingToastCleaner();
 
   const deleteBackupMutation = useMutation({
     mutationFn: async () => await deleteBackup(backup.id),
@@ -115,10 +117,10 @@ export function BackupCard({
               <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertGenericConfirmationDialogContent 
                   onConfirm={() => {
-                    const toastId = toast.loading("Deleting backup...");
+                    loadingToastRef.current = toast.loading("Deleting backup...");
                     deleteBackupMutation.mutate(undefined, {
                       onSettled: () => {
-                        toast.dismiss(toastId);
+                        toast.dismiss(loadingToastRef.current);
                       }
                     });
                   }}

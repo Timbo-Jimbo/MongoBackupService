@@ -7,6 +7,7 @@ import { backupPolicies, InsertBackupPolicy } from "@backend/db/backup-policy.sc
 import { mongoDatabases } from "@backend/db/mongo-database.schema";
 import { backups } from "@backend/db/backup.schema";
 import { deleteBackup } from "./backups";
+import { TaskScheduler } from "@backend/tasks/task-scheduler";
 
 export const getAllBackupPoliciesForDatabase = withAuthOrRedirect(async (mongoDatabaseId: number) => {
     return (await database.query.mongoDatabases.findFirst({ where: eq(mongoDatabases.id, mongoDatabaseId), with: { backupPolicies: true } }))?.backupPolicies || [];
@@ -17,10 +18,15 @@ export const getAllBackupPolicies = withAuthOrRedirect(async () => {
 });
 
 export const createBackupPolicy = withAuthOrRedirect(async (backupPolicyValues:InsertBackupPolicy) => {
+
+    const [ newPolicy ] =  await database.insert(backupPolicies).values([backupPolicyValues]).returning();
+
+    TaskScheduler.scheduleRun(newPolicy);
+
     return {
         success: true,
         message: `Backup Policy Created`,
-        backupPolicy: await database.insert(backupPolicies).values([backupPolicyValues]).returning().then(x => x[0])
+        backupPolicy: newPolicy,
     }
 });
 
@@ -31,13 +37,16 @@ export const deleteBackupPolicy = withAuthOrRedirect(async (id: number, deleteBa
         with: { backups: true }
     });
 
-    for(const backup of backupPolicyToDelete?.backups || []) {
+    if(!backupPolicyToDelete)
+        return { success: false, message: `Backup Policy not found` };
+
+    for(const backup of backupPolicyToDelete.backups) {
         if(deleteBackups)
             await deleteBackup(backup.id);
         else
             await database.update(backups).set({backupPolicyId: null}).where(eq(backups.id, backup.id));
     }
-
+    TaskScheduler.clearScheduledRun(backupPolicyToDelete);
     await database.delete(backupPolicies).where(eq(backupPolicies.id, id));
 
     return { success: true, message: `Backup Policy Deleted` };

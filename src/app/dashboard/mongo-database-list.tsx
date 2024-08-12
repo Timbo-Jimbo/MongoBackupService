@@ -1,7 +1,7 @@
 "use client"
 
 import { MongoDatabaseCard } from "@/components/mongo-database-card";
-import { ButtonWithSpinner } from "@comp/button";
+import { Button, ButtonWithSpinner } from "@comp/button";
 import { DialogHeader, DialogFooter, Dialog, DialogContent, DialogDescription, DialogTitle } from "@comp/dialog";
 import { Input } from "@comp/input";
 import { Label } from "@comp/label";
@@ -30,7 +30,7 @@ export function MongoDatabaseList() {
           <span>Mongo Databases</span>
           <ButtonWithSpinner className="relative" variant={"ghost"} isLoading={mongoDatbaseListQueryClient.addDatabaseMutation.isPending} onClick={() => setAddFormOpen(true)}>
             <PlusIcon className="w-5 h-5 mr-2"/>
-            Register Mongo Database
+            Register
           </ButtonWithSpinner>
         </CardTitle>
         <CardDescription>
@@ -63,7 +63,13 @@ export function MongoDatabaseList() {
           <Alert>
             <HandRaisedIcon className="w-5 h-5 mr-2 animate-hand-wave" />
             <AlertTitle>Hey there!</AlertTitle>
-            <AlertDescription>Get started by registering your first database using the 'Register Mongo Database' button over to the top right!</AlertDescription>
+            <AlertDescription className="flex flex-col justify-start place-items-start gap-2">
+              Get started by registering your first database!
+              <Button variant="outline" onClick={() => setAddFormOpen(true)}>
+                <PlusIcon className="w-4 h-4 mr-2"/>
+                Register
+              </Button>
+            </AlertDescription>
           </Alert>
         </CardContent>
       )}

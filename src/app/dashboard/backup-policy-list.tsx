@@ -7,7 +7,6 @@ import { createBackupPolicy } from "@actions/backup-policies";
 import { InsertBackupPolicy } from "@backend/db/backup-policy.schema";
 import { BackupMode } from "@backend/tasks/compression.enums";
 import { Button } from "@comp/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@comp/card";
 import { Separator } from "@comp/separator";
 import { toastForActionResult } from "@comp/toasts";
 import { PlusIcon } from "@heroicons/react/20/solid";
@@ -15,7 +14,7 @@ import { useBackupListQueryClient } from "@lib/providers/backup-list-query-clien
 import { useBackupPoliciesListQueryClient } from "@lib/providers/backup-policies-list-query-client";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useMutation } from "@tanstack/react-query";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export function BackupPoliciesList() {
@@ -48,9 +47,9 @@ export function BackupPoliciesList() {
           <div className="flex flex-row gap-2 place-items-center">
           {isShowingPoliciesForSingleDb && (
             <>
-              <Button variant={"outline"} onClick={() => setAddBackupPolicyDialogOpen(true)}>
+              <Button variant={"ghost"} onClick={() => setAddBackupPolicyDialogOpen(true)}>
                 <PlusIcon className="w-4 h-4 mr-2" />
-                Create Backup Policy
+                Create
               </Button>
               <DialogCreateBackupPolicy 
                 supportedOptions={backupListQueryClient.availableBackupModesQuery?.data ?? []}
@@ -78,7 +77,7 @@ export function BackupPoliciesList() {
         </div>
       </div>
       <div>
-        {isReady && results.length === 0 && <p className="text-muted-foreground text-sm"><InfoCircledIcon className="w-4 h-4 mr-2 inline" />There are no backup policies to show.</p>}
+        {isReady && results.length === 0 && <p className="text-muted-foreground text-sm"><InfoCircledIcon className="w-4 h-4 mr-2 inline" />There are no backup policies in place for this database.</p>}
         
         {!isReady && <SkeletonList count={backupPolicyListClient.skeletonCount} className="h-[3rem]"/>}
         {results.map((backupPolicy, index, backupPolicies) => (

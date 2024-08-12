@@ -10,12 +10,13 @@ type QueryListEntry = BackupPolicy;
 
 const createBackupPoliciesListQueryClient = (mongoDatabaseId: number | undefined) => {
 
-    const [skeletons, setSkeletonCount] = useLocalStorageState<number>("backup-policies-skeletons" + (mongoDatabaseId !== undefined ? `-mdb${mongoDatabaseId}` : ''), {
+    const queryKey = [`backup-policies-${mongoDatabaseId !== undefined ? `mdb_${mongoDatabaseId}` : 'all'}`];
+
+    const [skeletons, setSkeletonCount] = useLocalStorageState<number>(`${queryKey[0]}-skeletons`, {
         defaultValue: 0,
     });
 
     const queryClient = useQueryClient();
-    const queryKey = ["backup-policies"];
 
     const getAllQuery = useQuery({
         queryKey: queryKey,

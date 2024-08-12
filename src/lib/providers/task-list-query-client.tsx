@@ -11,10 +11,10 @@ type QueryListEntry = TaskWithRelations;
 
 const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
 
+    const queryKey = [`tasks-${mongoDatabaseId !== undefined ? `mdb_${mongoDatabaseId}` : 'all'}`];
     const queryClient = useQueryClient();
-    const queryKey = ["tasks"];
 
-    const [skeletons, setSkeletonCount] = useLocalStorageState<number>("task-skeletons" + (mongoDatabaseId !== undefined ? `-mdb${mongoDatabaseId}` : ''), {
+    const [skeletons, setSkeletonCount] = useLocalStorageState<number>(`${queryKey[0]}-skeletons`, {
         defaultValue: 0,
     });
     

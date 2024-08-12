@@ -25,7 +25,8 @@ export function timeAgoString(time: Date) {
 }
 
 export function timeUntilString(time: Date) {
-  const msUntil = time.getTime() - Date.now();
+  let msUntil = time.getTime() - Date.now();
+  if(msUntil < 0) return "Right now";
   return humanizeDuration(msUntil, {round: true, units:["y","mo","w","d", "h", "m"], largest: 1}) + " from now";
 }
 

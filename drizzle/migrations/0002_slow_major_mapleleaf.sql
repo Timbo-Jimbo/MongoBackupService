@@ -1,0 +1,1 @@
+ALTER TABLE `backup_policies` DROP COLUMN `next_backup_at`;

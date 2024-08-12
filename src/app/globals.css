@@ -103,7 +103,11 @@
     --gradient-border-fill-opacity: 0 !important;
   }
 
-  .gradientborder-fill-opacity-min::before {
+  .gradientborder-fill-opacity-subtle::before {
+    --gradient-border-fill-opacity: 0.2 !important;
+  }
+
+  .gradientborder-fill-opacity-low::before {
     --gradient-border-fill-opacity: 0.4 !important;
   }
 
@@ -111,7 +115,7 @@
     --gradient-border-fill-opacity: 0.6 !important;
   }
 
-  .gradientborder-fill-opacity-max::before {
+  .gradientborder-fill-opacity-high::before {
     --gradient-border-fill-opacity: 0.8 !important;
   }
   
@@ -121,6 +125,22 @@
     @apply rounded-[var(--gradient-border-radius)] border-none bg-gradient-to-tr from-emerald-900/60 to-slate-800/60 backdrop-blur-md
   }
 
+  .gradientborder-col-positive {
+    @apply bg-gradient-to-tr from-emerald-400/60 to-green-700/60
+  }
+
+  .gradientborder-col-destructive {
+    @apply bg-gradient-to-tr from-red-700/60 to-rose-800/60
+  }
+
+  .gradientborder-col-positive::before {
+    --gradient-border-fill-opacity: 0.2 !important;
+  }
+
+  .gradientborder-col-destructive::before {
+    --gradient-border-fill-opacity: 0.2 !important;
+  }
+  
   .gradientborder::before {
     content: "";
     --gradient-border-fill-opacity: 0.8;

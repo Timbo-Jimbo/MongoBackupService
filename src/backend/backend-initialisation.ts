@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { TaskProgress, tasks, TaskState } from "./db/task.schema";
+import { TaskScheduler } from "./tasks/task-scheduler";
 
 export async function bootstrap() {
     const { database } = await import("./db");
@@ -20,6 +21,22 @@ export async function bootstrap() {
                 message: "Task was interupted by server shutdown."
             } as TaskProgress
         }).where(eq(tasks.id, task.id));
+    }
+
+    const backupPolicies = await database.query.backupPolicies.findMany({
+        with: {
+            backups: true
+        }
+    });
+
+    // schedule work
+    for (const policy of backupPolicies) {
+        
+        TaskScheduler.scheduleRun(policy);
+
+        for (const backup of policy.backups) {
+            TaskScheduler.scheduleDelete(policy, backup);
+        }
     }
 
     //todo... clean up orphaned backup files

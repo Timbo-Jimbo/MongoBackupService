@@ -2,11 +2,11 @@ import { Button } from "@comp/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@comp/dialog";
 import { Input } from "@comp/input";
 import { Label } from "@comp/label";
-import { ClockIcon, CommandLineIcon, ExclamationTriangleIcon, InformationCircleIcon, PlusIcon } from "@heroicons/react/20/solid";
+import { CommandLineIcon, InformationCircleIcon, PlusIcon } from "@heroicons/react/20/solid";
 import cronstrue from "cronstrue";
 import { useEffect, useState } from "react";
 import cronParser from "cron-parser"
-import { timeAgoString, timeUntilString } from "@lib/utils";
+import { timeUntilString } from "@lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@comp/alert";
 import { BackupMode } from "@backend/tasks/compression.enums";
 import { BackupModePicker } from "./backup-mode-picker";
@@ -15,6 +15,12 @@ enum CronValidation {
   Invalid,
   TooFrequent,
   Valid
+}
+
+type CronValidationResult = {
+  result: CronValidation;
+  alertTitle: string;
+  alertBody: string;
 }
 
 export function DialogCreateBackupPolicy ({
@@ -28,26 +34,21 @@ export function DialogCreateBackupPolicy ({
   open?: boolean;
   supportedOptions: BackupMode[];
 }) {
-  const [cronValidation, setCronValidation] = useState(CronValidation.Valid);
-  const [cronExpression, setCronExpression] = useState("0 10 * * MON,WED,FRI");
-  const [retentionDays, setRetentionDays] = useState<number | undefined>(7);
-  const [selectedMode, setSelectedMode] = useState(supportedOptions.includes(BackupMode.Balanced) ? BackupMode.Balanced : supportedOptions[0]);
-  const selectedModeSupported = supportedOptions.includes(selectedMode);
-  
-  useEffect(() => {
+
+  const defaultCronExpression = "0 10 * * MON,WED,FRI";
+  const minimumIntervalHours = 0.5 // 30 mins
+  const getCronValidationResultForCronExpression = (cronExpression: string): CronValidationResult => {
     try {
-      
-      if(cronstrue.toString(cronExpression) == "") {
-        setCronValidation(CronValidation.Invalid);
-        return
+      const cronString = cronstrue.toString(cronExpression);
+      if(cronString === "") {
+        throw new Error("Invalid cron expression");
       }
       
       const interval = cronParser.parseExpression(cronExpression);
       const hasNextRun = interval.hasNext();
 
       if(!hasNextRun) {
-        setCronValidation(CronValidation.Invalid);
-        return;
+        throw new Error("Invalid cron expression");
       }
 
       let lastDate = new Date();
@@ -68,26 +69,43 @@ export function DialogCreateBackupPolicy ({
       const averageIntervalMinutes = averageInterval / 1000 / 60;
       const averageIntervalHours = averageIntervalMinutes / 60;
 
-      if(averageIntervalHours < 1) 
-        setCronValidation(CronValidation.TooFrequent);
+      if(averageIntervalHours < minimumIntervalHours) 
+      {
+        return {
+          result: CronValidation.TooFrequent,
+          alertTitle: "Invalid Cron Expression",
+          alertBody: "This policy runs too frequently! Please choose a less frequent interval"
+        }
+      }
       else
-
-      setCronValidation(CronValidation.Valid);
+      {
+        return {
+          result: CronValidation.Valid,
+          alertTitle: cronString,
+          alertBody: `This means your next backup is in ${timeUntilString(interval.next().toDate())}`
+        };
+      }
     }
     catch (e) {
-      setCronValidation(CronValidation.Invalid);
+      return {
+        result: CronValidation.Invalid,
+        alertTitle: "Invalid Cron Expression",
+        alertBody: "Please enter a valid cron expression"
+      };
     }
+  };
+
+  const [cronValidationResult, setCronValidationResult] = useState<CronValidationResult>(getCronValidationResultForCronExpression(defaultCronExpression));
+  const [cronExpression, setCronExpression] = useState(defaultCronExpression);
+  const [retentionDays, setRetentionDays] = useState<number | undefined>(7);
+  const [selectedMode, setSelectedMode] = useState(supportedOptions.includes(BackupMode.Balanced) ? BackupMode.Balanced : supportedOptions[0]);
+  const selectedModeSupported = supportedOptions.includes(selectedMode);
+  
+  useEffect(() => {
+    setCronValidationResult(getCronValidationResultForCronExpression(cronExpression));
   }, [cronExpression]);
 
-  let cronString = "Invalid Cron Expression";
-  let nextRunDate = new Date();
-  try {
-    cronString = cronstrue.toString(cronExpression);
-    const interval = cronParser.parseExpression(cronExpression);
-    nextRunDate = interval.next().toDate();
-  } catch (e) {} 
-
-  const canCreate = cronValidation == CronValidation.Valid && selectedModeSupported && retentionDays !== undefined;
+  const canCreate = cronValidationResult.result == CronValidation.Valid && selectedModeSupported && retentionDays !== undefined;
 
   return (
   <Dialog onOpenChange={onOpenChange} open={open}>
@@ -117,25 +135,13 @@ export function DialogCreateBackupPolicy ({
                   </div>
                 )}
               </div>
-            <Alert className="col-start-2 col-span-5" variant={cronValidation == CronValidation.Valid ? "default" : "destructive"}>
+              <Alert className="col-start-2 col-span-5" variant={cronValidationResult.result == CronValidation.Valid ? "default" : "destructive"}>
               <InformationCircleIcon className="w-4 h-4" />
               <AlertTitle>
-                {cronString}
+                {cronValidationResult.alertTitle}
               </AlertTitle>
               <AlertDescription className="flex flex-row gap-2 items-center">
-                {cronValidation == CronValidation.Valid && (<>
-                  This means your next backup is in {timeUntilString(nextRunDate)}
-                </>)}
-                {cronValidation == CronValidation.Invalid && (
-                  <>
-                    Please enter a valid cron expression
-                  </>
-                )}
-                {cronValidation == CronValidation.TooFrequent && (
-                  <>
-                    This policy runs too frequently! Please choose a less frequent interval.
-                  </>
-                )}
+                {cronValidationResult.alertBody}
               </AlertDescription>
             </Alert>
           </div>

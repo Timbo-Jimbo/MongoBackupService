@@ -16,14 +16,13 @@ type QueryListEntry = {
 }
 
 const createMongoDatabaseListQueryClient = () => {
+    const queryKey = ["mongo-databases", "backups", "tasks", "backup-policies"];
 
-    const queryClient = useQueryClient();
-    const queryKey = ["backups", "mongo-databases", "tasks", "backup-policies"];
-
-    const [skeletons, setSkeletonCount] = useLocalStorageState<number>("mongo-database-skeletons", {
+    const [skeletons, setSkeletonCount] = useLocalStorageState<number>(`${queryKey[0]}-skeletons`, {
         defaultValue: 0,
     });
 
+    const queryClient = useQueryClient();
     const getAllQuery = useQuery({
         queryKey: queryKey,
         queryFn: async () => {

@@ -6,6 +6,7 @@ import { withAuthOrRedirect } from "./utils";
 import { backups } from "@backend/db/backup.schema";
 import { unlinkSync } from "node:fs";
 import { Compression } from "@backend/tasks/mongo-utils";
+import { TaskScheduler } from "@backend/tasks/task-scheduler";
 
 export const getAllBackups = withAuthOrRedirect(async () => {
     return await database.query.backups.findMany({ orderBy: [desc(backups.id)] });
@@ -20,6 +21,7 @@ export const deleteBackup = withAuthOrRedirect(async (id: number) => {
 
     if(backup) {
         await database.delete(backups).where(eq(backups.id, id)).execute();
+        TaskScheduler.clearScheduledDelete(backup);
         unlinkSync(backup.archivePath);
         console.log(`Deleted backup ${backup.archivePath}`);
         return { 

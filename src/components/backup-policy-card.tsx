@@ -1,7 +1,7 @@
 import { Button } from "@comp/button";
 import { TrashIcon } from "@heroicons/react/20/solid";
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DotsVerticalIcon } from "@radix-ui/react-icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@comp/dropdown-menu";
 import { AlertDialog, AlertDialogDescription, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
@@ -10,6 +10,7 @@ import { useBackupPoliciesListQueryClient } from "@lib/providers/backup-policies
 import { deleteBackupPolicy } from "@actions/backup-policies";
 import { toast, toastForActionResult } from "@comp/toasts";
 import cronstrue from "cronstrue";
+import { useLoadingToastCleaner } from "@lib/use-toast-cleaner";
 
 export function BackupPolicyCard({
   index,
@@ -21,6 +22,7 @@ export function BackupPolicyCard({
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const backupPoliciesListQueryClient = useBackupPoliciesListQueryClient();
+  const loadingToastRef = useLoadingToastCleaner();
 
   const deleteBackupPolicyMutation = useMutation({
     mutationFn: async (deleteBackups: boolean) => await deleteBackupPolicy(backupPolicy.id, deleteBackups),
@@ -60,7 +62,15 @@ export function BackupPolicyCard({
               </DropdownMenuContent>
             </DropdownMenu>
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <AlertGenericConfirmationDialogContent onConfirm={() => deleteBackupPolicyMutation.mutate(false)}>
+              <AlertGenericConfirmationDialogContent onConfirm={() => {
+                loadingToastRef.current = toast.loading("Deleting backup policy...");
+                deleteBackupPolicyMutation.mutate(false, {
+                  onSettled: () => {
+                    toast.dismiss(loadingToastRef.current);
+                  }
+                });
+                setDeleteDialogOpen(false);
+              }}>
                 <AlertDialogDescription>
                   Are you sure you want to delete this backup?
                 </AlertDialogDescription>
