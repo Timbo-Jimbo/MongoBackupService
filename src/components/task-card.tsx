@@ -159,14 +159,17 @@ export function TaskCard({
                         )}
                       </AlertDialogDescription>
                       <AlertDialogFooter>
-                        <AlertDialogAction onClick={() => {
-                          const toastId = toast.loading("Cancelling task...");
-                          cancelTaskMutation.mutate(undefined, {
-                            onSettled: () => {
-                              toast.dismiss(toastId);
-                            }
-                          });
-                        }}>
+                        <AlertDialogAction 
+                          destructive={task.cancellationType == TaskCancellationType.DangerousToCancel}
+                          onClick={() => {
+                            const toastId = toast.loading("Cancelling task...");
+                            cancelTaskMutation.mutate(undefined, {
+                              onSettled: () => {
+                                toast.dismiss(toastId);
+                              }
+                            });
+                          }}
+                        >
                           {task.cancellationType == TaskCancellationType.DangerousToCancel ? "Confirm (I know what I am doing)" : "Confirm"}
                         </AlertDialogAction>
                         <AlertDialogCancel>

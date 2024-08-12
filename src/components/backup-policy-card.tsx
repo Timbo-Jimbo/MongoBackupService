@@ -62,15 +62,18 @@ export function BackupPolicyCard({
               </DropdownMenuContent>
             </DropdownMenu>
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <AlertGenericConfirmationDialogContent onConfirm={() => {
-                loadingToastRef.current = toast.loading("Deleting backup policy...");
-                deleteBackupPolicyMutation.mutate(false, {
-                  onSettled: () => {
-                    toast.dismiss(loadingToastRef.current);
-                  }
-                });
-                setDeleteDialogOpen(false);
-              }}>
+              <AlertGenericConfirmationDialogContent
+                destructive
+                onConfirm={() => {
+                  loadingToastRef.current = toast.loading("Deleting backup policy...");
+                  deleteBackupPolicyMutation.mutate(false, {
+                    onSettled: () => {
+                      toast.dismiss(loadingToastRef.current);
+                    }
+                  });
+                  setDeleteDialogOpen(false);
+               }}
+              >
                 <AlertDialogDescription>
                   Are you sure you want to delete this backup?
                 </AlertDialogDescription>

@@ -318,16 +318,19 @@ export function MongoDatabaseCard({
               </DropdownMenuContent>
             </DropdownMenu>
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <AlertGenericConfirmationDialogContent onConfirm={() => {
-                loadingToastRef.current = toast.loading("Deleting database...");
-                deleteDatabaseMutation.mutate(true, {
-                  onSettled: () => {
-                    toast.dismiss(loadingToastRef.current);
-                  }
-                });
+              <AlertGenericConfirmationDialogContent 
+                destructive
+                onConfirm={() => {
+                  loadingToastRef.current = toast.loading("Deleting database...");
+                  deleteDatabaseMutation.mutate(true, {
+                    onSettled: () => {
+                      toast.dismiss(loadingToastRef.current);
+                    }
+                  });
 
-                setDeleteDialogOpen(false);
-              }}>
+                  setDeleteDialogOpen(false);
+                }}
+              >
                 <div className="flex flex-col gap-4">
                   <AlertDialogDescription>
                     Are you sure you want to remove this database?

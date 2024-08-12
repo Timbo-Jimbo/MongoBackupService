@@ -103,11 +103,11 @@ AlertDialogDescription.displayName =
 
 const AlertDialogAction = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Action>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action> & { destructive?: boolean }
+>(({ className, destructive, ...props }, ref) => (
   <AlertDialogPrimitive.Action
     ref={ref}
-    className={cn(buttonVariants(), className)}
+    className={cn(buttonVariants({ variant: destructive? "destructive" : "default"}), className)}
     {...props}
   />
 ))
@@ -133,6 +133,7 @@ const AlertGenericConfirmationDialogContent = ({
   title = "Confirmation",
   positiveButtonLabel = "Confirm",
   negativeButtonLabel = "Cancel",
+  destructive = false,
   onConfirm,
   onCancel,
   children
@@ -140,6 +141,7 @@ const AlertGenericConfirmationDialogContent = ({
   title?: string | undefined
   positiveButtonLabel?: string | undefined
   negativeButtonLabel?: string | undefined
+  destructive?: boolean | undefined
   onConfirm?: () => void | undefined
   onCancel?: () => void | undefined
   children?: React.ReactNode
@@ -151,7 +153,7 @@ const AlertGenericConfirmationDialogContent = ({
       </AlertDialogHeader>
       {children}
       <AlertDialogFooter>
-        <AlertDialogAction onClick={onConfirm}>
+        <AlertDialogAction onClick={onConfirm} destructive={destructive}>
           {positiveButtonLabel}
         </AlertDialogAction>
         <AlertDialogCancel onClick={onCancel}>

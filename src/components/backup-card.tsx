@@ -116,6 +116,7 @@ export function BackupCard({
               </DropdownMenu>
               <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertGenericConfirmationDialogContent 
+                  destructive
                   onConfirm={() => {
                     loadingToastRef.current = toast.loading("Deleting backup...");
                     deleteBackupMutation.mutate(undefined, {
