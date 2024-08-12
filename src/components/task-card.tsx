@@ -31,6 +31,12 @@ function Badges({
 }) {
   return (
     <div className={cn(["flex flex-row gap-2 size-fit", className])}>
+      {task.associatedBackupPolicy && (
+        <Badge variant={"secondary"} className="flex-grow justify-center">
+          <SparklesIcon className="w-4 h-4 mr-1 -ml-1" />
+          Triggered by Policy 
+        </Badge>
+      )}
       {!task.isComplete && (
         <Badge variant={"outline"} className="flex-grow justify-center animate-pulse" >
           Running
@@ -48,12 +54,6 @@ function Badges({
         <ClockIcon className="w-4 h-4 mr-1 -ml-1" />
         <DurationDisplay startTime={task.startedAt} endTime={() => task.completedAt ?? new Date()} />
       </Badge>
-      {task.associatedBackupPolicy && (
-        <Badge variant={"secondary"} className="flex-grow justify-center">
-          <SparklesIcon className="w-4 h-4 mr-1 -ml-1" />
-          Triggered by Policy 
-        </Badge>
-      )}
     </div>
   );
 }

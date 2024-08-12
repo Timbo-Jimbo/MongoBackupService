@@ -43,32 +43,32 @@ function Badges({
           Created by Policy 
         </Badge>
       )}
+      {backup.backupPolicy && (
+        <Badge variant={"destructive"} className="flex-grow justify-center ">
+          <TrashIcon className="w-4 h-4 mr-1 -ml-1" />
+          {shortHumanizeDuration((backup.finishedAt.getTime() + backup.backupPolicy.backupRetentionDays * 86400000) - Date.now())}
+        </Badge>
+      )}
       {backup.backupPolicyId && backup.backupPolicy && (
-        <>
-          <Badge variant={"secondary"} className="flex-grow justify-center ">
-            <LinkIcon className="w-4 h-4 mr-1 -ml-1" />
-            {backup.backupPolicy.referenceName}
-          </Badge>
-          <Badge variant={"destructive"} className="flex-grow justify-center ">
-            <TrashIcon className="w-4 h-4 mr-1 -ml-1" />
-            {shortHumanizeDuration((backup.finishedAt.getTime() + backup.backupPolicy.backupRetentionDays * 86400000) - Date.now())}
-          </Badge>
-          </>
+        <Badge variant={"outline"} className="flex-grow justify-center ">
+          <LinkIcon className="w-4 h-4 mr-1 -ml-1" />
+          Policy<span className="opacity-50 ml-1">{backup.backupPolicy.referenceName}</span>
+        </Badge>
       )}
       {backup.backupPolicyId && !backup.backupPolicy && (
-        <Badge variant={"destructive"} className="flex-grow justify-center ">
+        <Badge variant={"outline"} className="flex-grow justify-center ">
           <LinkSlashIcon className="w-4 h-4 mr-1 -ml-1" />
           Associated Policy Deleted
         </Badge>
       )}
       {backup.mongoDatabaseId && backup.mongoDatabase && (
-        <Badge variant={"secondary"} className="flex-grow justify-center ">
+        <Badge variant={"outline"} className="flex-grow justify-center ">
           <LinkIcon className="w-4 h-4 mr-1 -ml-1" />
-          {backup.mongoDatabase.referenceName}
+          Database <span className="opacity-50 ml-1">{backup.mongoDatabase.referenceName}</span>
         </Badge>
       )}
       {backup.mongoDatabaseId && !backup.mongoDatabase && (
-        <Badge variant={"destructive"} className="flex-grow justify-center ">
+        <Badge variant={"outline"} className="flex-grow justify-center ">
           <LinkSlashIcon className="w-4 h-4 mr-1 -ml-1" />
           Associated Database Removed
         </Badge>

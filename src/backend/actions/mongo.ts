@@ -14,6 +14,7 @@ import { MongoRestoreExecutor } from "@backend/tasks/mongo-restore";
 import { MongoImportExecutor } from "@backend/tasks/mongo-import";
 import { BackupMode } from "@backend/tasks/compression.enums";
 import { mongoDatabasesToTasks } from "@backend/db/mongo-databases-to-tasks.schema";
+import { backupPolicies } from "@backend/db/backup-policy.schema";
 
 function censorMongoDatabase(mongoDatabase: MongoDatabase): MongoDatabaseCensored {
     
@@ -197,6 +198,7 @@ export const deleteMongoDatabase = withAuthOrRedirect(async (id: number, deleteB
 
     await database.delete(mongoDatabases).where(eq(mongoDatabases.id, id));
     await database.delete(mongoDatabasesToTasks).where(eq(mongoDatabasesToTasks.mongoDatabaseId, id));
+    await database.delete(backupPolicies).where(eq(backupPolicies.mongoDatabaseId, id));
 
     return {
         success: true,
