@@ -1,7 +1,7 @@
 "use client"
 
 import { BackupPolicyCard } from "@/components/backup-policy-card";
-import { DialogCreateBackupPolicy } from "@/components/dialog-create-backup-policy";
+import { DialogBackupPolicy } from "@/components/dialog-backup-policy";
 import { SkeletonList } from "@/components/skeleton-list";
 import { createBackupPolicy } from "@actions/backup-policies";
 import { InsertBackupPolicy } from "@backend/db/backup-policy.schema";
@@ -42,7 +42,7 @@ export function BackupPoliciesList() {
   return (
     <div className="ml-4 flex flex-col gap-2">
       <div className="flex flex-col">
-        <div className="flex place-items-center">
+        <div className="flex place-items-center ">
           <h1 className="font-bold w-full">Backup Policies</h1>
           <div className="flex flex-row gap-2 place-items-center">
           {isShowingPoliciesForSingleDb && (
@@ -51,11 +51,11 @@ export function BackupPoliciesList() {
                 <PlusIcon className="w-4 h-4 mr-2" />
                 Create
               </Button>
-              <DialogCreateBackupPolicy 
+              <DialogBackupPolicy
                 supportedOptions={backupListQueryClient.availableBackupModesQuery?.data ?? []}
                 open={addBackupPolicyDialogOpen}
                 onOpenChange={setAddBackupPolicyDialogOpen}
-                onCreatePolicy={(referenceName: string, cronExpression: string, retentionDays: number, mode: BackupMode) => {
+                onActionClick={(referenceName: string, cronExpression: string, retentionDays: number, mode: BackupMode) => {
                   setAddBackupPolicyDialogOpen(false);
                   const toastId = toast.loading("Creating backup policy...");
 

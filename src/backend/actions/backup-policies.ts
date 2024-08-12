@@ -72,14 +72,40 @@ export const deleteBackupPolicy = withAuthOrRedirect(async (id: number, deleteBa
     if(backupPolicyToDelete.activeTask && !backupPolicyToDelete.activeTask.isComplete)
         return { success: false, message: `Backup Policy is currently running` };
 
-    for(const backup of backupPolicyToDelete.backups) {
-        if(deleteBackups)
+    if(deleteBackups)
+    {
+        for(const backup of backupPolicyToDelete.backups) {
             await deleteBackup(backup.id);
-        else
-            await database.update(backups).set({backupPolicyId: null}).where(eq(backups.id, backup.id));
+        }
     }
+       
     TaskScheduler.clearScheduledRun(backupPolicyToDelete);
     await database.delete(backupPolicies).where(eq(backupPolicies.id, id));
 
     return { success: true, message: `Backup Policy Deleted` };
+});
+
+export const updateBackupPolicy = withAuthOrRedirect(async (id: number, values: InsertBackupPolicy) => {
+
+    const interval = cronParser.parseExpression(values.backupIntervalCron);
+    values.nextBackupAt = interval.hasNext() ? new Date(interval.next().getTime()) : null;
+
+    await database.update(backupPolicies).set(values).where(eq(backupPolicies.id, id)).execute();
+
+    const updatedPolicy = await database.query.backupPolicies.findFirst({
+        where: eq(backupPolicies.id, id),
+        with: { 
+            activeTask: true,
+            backups: true,
+            mongoDatabase: true
+        }
+    }) as BackupPolicyWithRelations;
+
+    TaskScheduler.scheduleRun(updatedPolicy);
+
+    return {
+        success: true,
+        message: `Backup Policy Updated`,
+        backupPolicy: updatedPolicy
+    }
 });

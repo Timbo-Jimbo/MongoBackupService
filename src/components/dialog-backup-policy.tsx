@@ -23,14 +23,25 @@ type CronValidationResult = {
   alertBody: string;
 }
 
-export function DialogCreateBackupPolicy ({
+type Defaults = {
+  referenceName: string;
+  cronExpression: string;
+  retentionDays: number;
+  mode: BackupMode;
+}
+
+export function DialogBackupPolicy ({
+  defaults,
+  actionName = "Create Policy",
   onOpenChange,
-  onCreatePolicy,
+  onActionClick,
   open,
-  supportedOptions
+  supportedOptions,
 }: {
+  defaults?: Defaults;
+  actionName?: string;
   onOpenChange?: (open: boolean) => void;
-  onCreatePolicy: (referenceName: string, cronExpression: string, retentionDays: number, mode: BackupMode) => void;
+  onActionClick: (referenceName: string, cronExpression: string, retentionDays: number, mode: BackupMode) => void;
   open?: boolean;
   supportedOptions: BackupMode[];
 }) {
@@ -98,24 +109,27 @@ export function DialogCreateBackupPolicy ({
     }
   };
 
-  const defaultReferenceName = "Backup Policy";
-  const defaultCronExpression = "0 10 * * MON,WED,FRI";
-  const defaultRetentionDays = 7;
-  const defaultMode = supportedOptions.includes(BackupMode.Balanced) ? BackupMode.Balanced : supportedOptions[0];
+  if(!defaults) {
+    defaults = {
+      referenceName: "Backup Policy",
+      cronExpression: "0 10 * * MON,WED,FRI",
+      retentionDays: 7,
+      mode: supportedOptions.includes(BackupMode.Balanced) ? BackupMode.Balanced : supportedOptions[0]
+    }
+  }
 
-  const [referenceName, setReferenceName] = useState(defaultReferenceName);
-  const [cronValidationResult, setCronValidationResult] = useState<CronValidationResult>(getCronValidationResultForCronExpression(defaultCronExpression));
-  const [cronExpression, setCronExpression] = useState(defaultCronExpression);
-  const [retentionDays, setRetentionDays] = useState<number | undefined>(defaultRetentionDays);
-  const [selectedMode, setSelectedMode] = useState(defaultMode);
+  const [referenceName, setReferenceName] = useState(defaults.referenceName);
+  const [cronValidationResult, setCronValidationResult] = useState<CronValidationResult>(getCronValidationResultForCronExpression(defaults.cronExpression));
+  const [cronExpression, setCronExpression] = useState(defaults.cronExpression);
+  const [retentionDays, setRetentionDays] = useState<number | undefined>(defaults.retentionDays);
+  const [selectedMode, setSelectedMode] = useState(defaults.mode);
   
   useEffect(() => {
     if(open) {
-      //reset form
-      setReferenceName(defaultReferenceName);
-      setCronExpression(defaultCronExpression);
-      setRetentionDays(defaultRetentionDays);
-      setSelectedMode(defaultMode);
+      setReferenceName(defaults.referenceName);
+      setCronExpression(defaults.cronExpression);
+      setRetentionDays(defaults.retentionDays);
+      setSelectedMode(defaults.mode);
     }
   }, [open]);
 
@@ -260,7 +274,7 @@ export function DialogCreateBackupPolicy ({
           </div>
         </div>
         <DialogFooter>
-          <Button disabled={!canCreate} onClick={() => onCreatePolicy(referenceName, cronExpression, retentionDays ?? 1, selectedMode)}><PlusIcon className="w-4 h-5 mr-2"/>Create Policy</Button>
+          <Button disabled={!canCreate} onClick={() => onActionClick(referenceName, cronExpression, retentionDays ?? 1, selectedMode)}><PlusIcon className="w-4 h-5 mr-2"/>{actionName}</Button>
         </DialogFooter>
       </DialogContent>
   </Dialog>

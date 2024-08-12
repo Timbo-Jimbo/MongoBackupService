@@ -202,7 +202,7 @@ export function MongoDatabaseCard({
               <DropdownMenuContent>
                 <DropdownMenuItem disabled={backupListQueryClient.availableBackupModesQuery.isPending} onClick={() => setStartManualBackupDialogOpen(true)}>
                   <Square3Stack3DIcon className="w-4 h-4 mr-2" />
-                  Backup...
+                  Backup now...
                 </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
@@ -366,13 +366,15 @@ export function MongoDatabaseCard({
             />
         </div>
       </div>
-      <Badges className="inline-flex lg:hidden" ping={ping} mongoDatabase={mongoDatabase} latestTask={latestTask}/>
+      <Badges className="inline-flex flex-wrap lg:hidden" ping={ping} mongoDatabase={mongoDatabase} latestTask={latestTask}/>
       <div className="flex flex-row gap-2 place-items-center">
         <p className="text-sm text-muted-foreground">{mongoDatabase.censoredConnectionUri}</p>
       </div>
-      <BackupPoliciesListQueryClientProvider databaseId={mongoDatabase.id}>
-        <BackupPoliciesList />
-      </BackupPoliciesListQueryClientProvider>
+      <div className="mt-2">
+        <BackupPoliciesListQueryClientProvider databaseId={mongoDatabase.id}>
+          <BackupPoliciesList />
+        </BackupPoliciesListQueryClientProvider>
+      </div>
     </div>
   );
 }

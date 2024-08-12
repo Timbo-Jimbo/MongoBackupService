@@ -190,7 +190,7 @@ export function TaskCard({
               )}
             </div>
           </div>
-          <Badges className="inline-flex lg:hidden" task={task} />
+          <Badges className="inline-flex flex-wrap lg:hidden" task={task} />
           <div className="flex flex-row gap-2 place-items-center">
             {!task.isComplete && <LoadingSpinner className="w-7 h-7 mr-2" />}
             <div className="flex flex-col w-full gap-1">

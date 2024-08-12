@@ -59,6 +59,14 @@ const createBackupPoliciesListQueryClient = (mongoDatabaseId: number | undefined
             refetchType: "all"
         });
     }
+    
+    const notifyBackupPolicyWasModified = (policy: BackupPolicyWithRelations) => {
+        queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
+            const newEntries = entries.map(entry => entry.id === policy.id ? policy : entry);
+            setSkeletonCount(newEntries.length);
+            return newEntries;
+        });
+    }
 
     return {
         queryKey,
@@ -66,6 +74,7 @@ const createBackupPoliciesListQueryClient = (mongoDatabaseId: number | undefined
         mongoDatabaseId,
         notifyBackupPolicyWasDeleted,
         notifyBackupPolicyWasAdded,
+        notifyBackupPolicyWasModified,
         notifyBackupPoliciesPotentiallyDirty,
         skeletonCount: skeletons
     }

@@ -198,11 +198,6 @@ export const deleteMongoDatabase = withAuthOrRedirect(async (id: number, deleteB
     await database.delete(mongoDatabases).where(eq(mongoDatabases.id, id));
     await database.delete(mongoDatabasesToTasks).where(eq(mongoDatabasesToTasks.mongoDatabaseId, id));
 
-    if(!deleteBackups){
-        //just dis-associate the backups
-        await database.update(backups).set({mongoDatabaseId: null}).where(eq(backups.mongoDatabaseId, id));
-    }
-
     return {
         success: true,
         message: "Database deleted successfully"

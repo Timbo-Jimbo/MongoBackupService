@@ -1,13 +1,13 @@
 import { Button } from "@comp/button";
-import { AdjustmentsHorizontalIcon, ArchiveBoxXMarkIcon, ArrowLeftCircleIcon, ArrowLeftIcon, ArrowRightIcon, ArrowUturnLeftIcon, BackwardIcon, CalendarDaysIcon, CalendarIcon, ChartPieIcon, ForwardIcon, ScaleIcon, Square3Stack3DIcon, TrashIcon, XCircleIcon } from "@heroicons/react/20/solid";
+import { AdjustmentsHorizontalIcon, ArchiveBoxXMarkIcon, ArrowLeftCircleIcon, ArrowLeftIcon, ArrowRightIcon, ArrowUturnLeftIcon, BackwardIcon, CalendarDaysIcon, CalendarIcon, ChartPieIcon, ForwardIcon, PencilIcon, PencilSquareIcon, ScaleIcon, Square3Stack3DIcon, TrashIcon, XCircleIcon } from "@heroicons/react/20/solid";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { DotsVerticalIcon } from "@radix-ui/react-icons";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@comp/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@comp/dropdown-menu";
 import { AlertDialog, AlertDialogDescription, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
-import { BackupPolicy, BackupPolicyWithRelations } from "@backend/db/backup-policy.schema";
+import { BackupPolicy, BackupPolicyWithRelations, InsertBackupPolicy } from "@backend/db/backup-policy.schema";
 import { useBackupPoliciesListQueryClient } from "@lib/providers/backup-policies-list-query-client";
-import { deleteBackupPolicy } from "@actions/backup-policies";
+import { deleteBackupPolicy, updateBackupPolicy } from "@actions/backup-policies";
 import { toast, toastForActionResult } from "@comp/toasts";
 import cronstrue from "cronstrue";
 import { useLoadingToastCleaner } from "@lib/use-toast-cleaner";
@@ -17,9 +17,12 @@ import { Badge } from "@comp/badge";
 import { LoadingSpinner } from "@comp/loading-spinner";
 import { tryUseMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
 import { tryUseTaskListQueryClient } from "@lib/providers/task-list-query-client";
-import { tryUseBackupListQueryClient } from "@lib/providers/backup-list-query-client";
+import { tryUseBackupListQueryClient, useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { MiniStatbox, Statbox } from "./statbox";
 import prettyBytes from "pretty-bytes";
+import { DialogBackupPolicy } from "./dialog-backup-policy";
+import { BackupMode } from "@backend/tasks/compression.enums";
+import { CogIcon } from "@heroicons/react/16/solid";
 
 function Badges({
   backupPolicy,
@@ -51,10 +54,11 @@ export function BackupPolicyCard({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const backupPoliciesListQueryClient = useBackupPoliciesListQueryClient();
   const loadingToastRef = useLoadingToastCleaner();
+  const [updateBackupPolicyDialogOpen, setUpdateBackupPolicyDialogOpen] = useState(false);
 
   //hack to detect backup policy transitioning into running state..!
   const taskListQueryClient = tryUseTaskListQueryClient();
-  const backupListQueryClient = tryUseBackupListQueryClient();
+  const backupListQueryClient = useBackupListQueryClient();
   const mongoDatabaseListQueryClient = tryUseMongoDatabaseListQueryClient();
 
   const activeTaskIdRef = useRef(backupPolicy.activeTask?.id);
@@ -77,6 +81,18 @@ export function BackupPolicyCard({
       toastForActionResult(result);
       if(!result?.success) return;
       backupPoliciesListQueryClient.notifyBackupPolicyWasDeleted(backupPolicy.id);
+    }
+  });
+
+  const updateBackupPolicyMutation = useMutation({
+    mutationFn: async (values: InsertBackupPolicy) => {
+      return await updateBackupPolicy(backupPolicy.id, values);
+    },
+    onSuccess: async (result) => {
+      toastForActionResult(result);
+      if(!result?.success) return;
+      backupPoliciesListQueryClient.notifyBackupPolicyWasModified(result.backupPolicy);
+      backupListQueryClient.notifyBackupsPotentiallyDirty();
     }
   });
 
@@ -104,6 +120,11 @@ export function BackupPolicyCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setUpdateBackupPolicyDialogOpen(true)}>
+                  <PencilSquareIcon className="w-4 h-4 mr-2" />
+                  Update
+                </DropdownMenuItem>
+                <DropdownMenuSeparator/>
                 <DropdownMenuItem className="bg-destructive/75 focus:bg-destructive text-destructive-foreground" onClick={() => setDeleteDialogOpen(true)} disabled={deleteBackupPolicyMutation.isPending}>
                     <TrashIcon className="w-4 h-4 mr-2" />
                     Delete
@@ -131,7 +152,7 @@ export function BackupPolicyCard({
           </div>
           <div className="w-full gap-4 grid grid-cols-2 lg:grid-cols-3 py-4">
           <Statbox className="col-span-1" title="Next Run" stat={(backupPolicy.activeTask && !backupPolicy.activeTask.isComplete) ? "Running right now" : backupPolicy.nextBackupAt ? timeUntilString(backupPolicy.nextBackupAt) : "Never"} Icon={ArrowRightIcon} />
-          <Statbox className="col-span-1 capitalize" title="Mode" stat={humanReadableEnumString(backupPolicy.backupMode)} Icon={AdjustmentsHorizontalIcon} />
+          <Statbox className="col-span-1 capitalize" title="Mode" stat={humanReadableEnumString(backupPolicy.backupMode)} Icon={CogIcon} />
           <Statbox className="col-span-1" title="Last Run" stat={backupPolicy.lastBackupAt ? timeAgoString(backupPolicy.lastBackupAt) : "Never"} Icon={ArrowUturnLeftIcon} />
           <Statbox className="col-span-1" title="Retention" stat={`${backupPolicy.backupRetentionDays} days`} Icon={CalendarDaysIcon} />
           <Statbox className="col-span-1" title="Backups" stat={backupPolicy.backups.length.toLocaleString()} Icon={Square3Stack3DIcon} />
@@ -139,6 +160,34 @@ export function BackupPolicyCard({
           </div>
         </div>
       </div>
+
+      <DialogBackupPolicy
+        defaults={{
+          referenceName: backupPolicy.referenceName,
+          cronExpression: backupPolicy.backupIntervalCron,
+          retentionDays: backupPolicy.backupRetentionDays,
+          mode: backupPolicy.backupMode
+        }}
+        supportedOptions={backupListQueryClient.availableBackupModesQuery?.data ?? []}
+        actionName="Update Policy"
+        open={updateBackupPolicyDialogOpen}
+        onOpenChange={setUpdateBackupPolicyDialogOpen}
+        onActionClick={(referenceName: string, cronExpression: string, retentionDays: number, mode: BackupMode) => {
+          setUpdateBackupPolicyDialogOpen(false);
+          const toastId = toast.loading("Updating backup policy...");
+          updateBackupPolicyMutation.mutate({
+            mongoDatabaseId: backupPolicy.mongoDatabaseId,
+            referenceName: referenceName,
+            backupIntervalCron: cronExpression,
+            backupRetentionDays: retentionDays,
+            backupMode: mode
+          }, {
+            onSettled: () => {
+              toast.dismiss(toastId);
+            }
+          });
+        }}
+      />
     </div>
   );
 }

@@ -24,10 +24,14 @@ export function timeAgoString(time: Date) {
   return lessThanOneMinSince ? "Just now" : (humanizeDuration(msSince, {round: true, units:["y","mo","w","d", "h", "m"], largest: 1}) + " ago");
 }
 
+export function shortHumanizeDuration(ms: number) { 
+  return humanizeDuration(ms, {round: true, units:["y","mo","w","d", "h", "m"], largest: 1});
+}
+
 export function timeUntilString(time: Date) {
   let msUntil = time.getTime() - Date.now();
   if(msUntil < 0) return "Right now";
-  return humanizeDuration(msUntil, {round: true, units:["y","mo","w","d", "h", "m"], largest: 1}) + " from now";
+  return shortHumanizeDuration(msUntil) + " from now";
 }
 
 export function humanReadableEnumString(enumValue: string) {

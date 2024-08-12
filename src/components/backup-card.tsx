@@ -1,20 +1,19 @@
 import { deleteBackup } from "@actions/backups";
-import { Backup, BackupWithRelations } from "@backend/db/backup.schema";
+import { BackupWithRelations } from "@backend/db/backup.schema";
 import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
 import { Button } from "@comp/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@comp/dropdown-menu";
 import { toast, toastForActionResult } from "@comp/toasts";
-import { AdjustmentsHorizontalIcon, ChartPieIcon, ClockIcon, CogIcon, DocumentIcon, ScaleIcon, Square3Stack3DIcon, TableCellsIcon, TrashIcon } from "@heroicons/react/20/solid";
-import { CursorArrowRaysIcon, CalendarIcon } from "@heroicons/react/16/solid";
+import { ChartPieIcon, ClockIcon, DocumentIcon, Square3Stack3DIcon, TableCellsIcon } from "@heroicons/react/20/solid";
+import { CursorArrowRaysIcon, TrashIcon, TagIcon, CogIcon, SparklesIcon, LinkIcon, LinkSlashIcon } from "@heroicons/react/16/solid";
 import {} from "@heroicons/react/20/solid";
 import { useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
-import { cn, humanReadableEnumString, timeAgoString, timeUntilString } from "@lib/utils";
+import { cn, humanReadableEnumString, shortHumanizeDuration, timeAgoString } from "@lib/utils";
 import { DotsVerticalIcon, DownloadIcon } from "@radix-ui/react-icons";
 import { useMutation } from "@tanstack/react-query";
 import prettyBytes from "pretty-bytes"
 import { useState } from "react";
-import { DurationDisplay } from "./time-since-display";
 import { Badge } from "@comp/badge";
 import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
 import Link from "next/link";
@@ -31,24 +30,50 @@ function Badges({
   className?: string
 }) {
   return (
-    <div className={cn(["flex flex-row gap-2 size-fit", className])}>
+    <div className={cn(["flex flex-row gap-2", className])}>
       {!backup.backupPolicyId && (
-        <Badge variant={"secondary"}>
+        <Badge variant={"secondary"} className="size-fit">
           <CursorArrowRaysIcon className="w-4 h-4 mr-1 -ml-1" />
           Created Manually
         </Badge>
       )}
-      {backup.backupPolicy && (
-        <Badge variant={"secondary"}>
-          <CalendarIcon className="w-4 h-4 mr-1 -ml-1" />
-          Created by Policy
+      {backup.backupPolicyId && (
+        <Badge variant={"secondary"} className="size-fit">
+          <SparklesIcon className="w-4 h-4 mr-1 -ml-1" />
+          Created by Policy 
         </Badge>
       )}
-      {backup.backupPolicy && (
-        <Badge variant={"destructive"}>
-          <span className="opacity-50 mr-1">Expires</span> {timeUntilString(new Date(backup.finishedAt.getTime() + backup.backupPolicy.backupRetentionDays * 86400000))}
+      {backup.backupPolicyId && backup.backupPolicy && (
+        <>
+          <Badge variant={"secondary"} className="size-fit">
+            <LinkIcon className="w-4 h-4 mr-1 -ml-1" />
+            {backup.backupPolicy.referenceName}
+          </Badge>
+          <Badge variant={"destructive"} className="size-fit">
+            <TrashIcon className="w-4 h-4 mr-1 -ml-1" />
+            {shortHumanizeDuration((backup.finishedAt.getTime() + backup.backupPolicy.backupRetentionDays * 86400000) - Date.now())}
+          </Badge>
+          </>
+      )}
+      {backup.backupPolicyId && !backup.backupPolicy && (
+        <Badge variant={"destructive"} className="size-fit">
+          <LinkSlashIcon className="w-4 h-4 mr-1 -ml-1" />
+          Associated Policy Deleted
         </Badge>
       )}
+      {backup.mongoDatabaseId && backup.mongoDatabase && (
+        <Badge variant={"secondary"} className="size-fit">
+          <LinkIcon className="w-4 h-4 mr-1 -ml-1" />
+          {backup.mongoDatabase.referenceName}
+        </Badge>
+      )}
+      {backup.mongoDatabaseId && !backup.mongoDatabase && (
+        <Badge variant={"destructive"} className="size-fit">
+          <LinkSlashIcon className="w-4 h-4 mr-1 -ml-1" />
+          Associated Database Removed
+        </Badge>
+      )}
+
     </div>
   );
 }
@@ -128,13 +153,13 @@ export function BackupCard({
               </AlertDialog>
             </div>
           </div>
-          <Badges className="inline-flex lg:hidden" backup={backup} />
+          <Badges className="inline-flex flex-wrap lg:hidden" backup={backup} />
           <div className="w-full gap-4 grid grid-cols-2 lg:grid-cols-3 py-4">
             <Statbox className="col-span-1" title="Database Name" stat={backup.sourceMetadata.databaseName} Icon={Square3Stack3DIcon} />
             <Statbox className="col-span-1" title="Documents" stat={backup.sourceMetadata.collections.reduce((acc, c) => acc + c.documentCount, 0).toLocaleString()} Icon={DocumentIcon} />
             <Statbox className="col-span-1" title="Collections" stat={backup.sourceMetadata.collections.length.toLocaleString()} Icon={TableCellsIcon} />
             <Statbox className="col-span-1" title="Completed In" stat={humanizeDuration(msToComplete)} Icon={ClockIcon} />
-            <Statbox className="col-span-1 capitalize" title="Mode" stat={humanReadableEnumString(backup.mode)} Icon={AdjustmentsHorizontalIcon} />
+            <Statbox className="col-span-1 capitalize" title="Mode" stat={humanReadableEnumString(backup.mode)} Icon={CogIcon} />
             <Statbox className="col-span-1" title="Size" stat={`${prettyBytes(backup.sizeBytes)}`} Icon={ChartPieIcon} />
             {/* <Statbox className="col-span-1" title="Trigger" stat={backup.backupPolicy ? "Backup Policy" : "Manual"} Icon={CogIcon} /> */}
             {/* <Statbox className="col-span-1" title="Backup Rate" stat={} Icon={ChartPieIcon} /> */}
