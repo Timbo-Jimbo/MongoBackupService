@@ -40,3 +40,7 @@ export const backupsRelations = relations(backups, ({ one }) => ({
 export type Backup = typeof backups.$inferSelect;
 export type InsertBackup = typeof backups.$inferInsert;
 export type UpdateBackup = SQLiteUpdateSetSource<typeof backups>
+export type BackupWithRelations = Backup & { 
+    mongoDatabase: MongoDatabase | null,
+    backupPolicy: BackupPolicy | null 
+}

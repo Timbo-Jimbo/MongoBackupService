@@ -2,17 +2,17 @@
 
 import { createContext, useContext, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Backup } from "@backend/db/backup.schema";
+import { Backup, BackupWithRelations } from "@backend/db/backup.schema";
 import { getAllBackups, getAllBackupsForDatabase, getAvailableBackupModes } from "@actions/backups";
 import useLocalStorageState from "use-local-storage-state";
 
-type QueryListEntry = Backup;
+type QueryListEntry = BackupWithRelations;
 
 const createBackupListQueryClient = (mongoDatabaseId: number | undefined) => {
 
     const queryKey = ['backups', `backups-${mongoDatabaseId !== undefined ? `mdb_${mongoDatabaseId}` : 'all'}`];
 
-    const [skeletons, setSkeletonCount] = useLocalStorageState<number>(`${queryKey[0]}-skeletons`, {
+    const [skeletons, setSkeletonCount] = useLocalStorageState<number>(`${queryKey[1]}-skeletons`, {
         defaultValue: 0,
     });
 

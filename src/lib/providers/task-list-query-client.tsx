@@ -14,7 +14,7 @@ const createTaskListQueryClient = (mongoDatabaseId: number | undefined) => {
     const queryKey = ['tasks', `tasks-${mongoDatabaseId !== undefined ? `mdb_${mongoDatabaseId}` : 'all'}`];
     const queryClient = useQueryClient();
 
-    const [skeletons, setSkeletonCount] = useLocalStorageState<number>(`${queryKey[0]}-skeletons`, {
+    const [skeletons, setSkeletonCount] = useLocalStorageState<number>(`${queryKey[1]}-skeletons`, {
         defaultValue: 0,
     });
     

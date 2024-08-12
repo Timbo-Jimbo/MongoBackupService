@@ -1,0 +1,1 @@
+ALTER TABLE `backup_policies` ADD `reference_name` text DEFAULT 'Backup Policy' NOT NULL;

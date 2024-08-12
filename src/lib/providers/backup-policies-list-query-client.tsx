@@ -3,16 +3,16 @@
 import { createContext, useContext, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import useLocalStorageState from "use-local-storage-state";
-import { BackupPolicy, BackupPolicyWithActiveTask } from "@backend/db/backup-policy.schema";
+import { BackupPolicyWithRelations } from "@backend/db/backup-policy.schema";
 import { getAllBackupPolicies, getAllBackupPoliciesForDatabase } from "@actions/backup-policies";
 
-type QueryListEntry = BackupPolicyWithActiveTask;
+type QueryListEntry = BackupPolicyWithRelations;
 
 const createBackupPoliciesListQueryClient = (mongoDatabaseId: number | undefined) => {
 
     const queryKey = ['backup-policies', `backup-policies-${mongoDatabaseId !== undefined ? `mdb_${mongoDatabaseId}` : 'all'}`];
 
-    const [skeletons, setSkeletonCount] = useLocalStorageState<number>(`${queryKey[0]}-skeletons`, {
+    const [skeletons, setSkeletonCount] = useLocalStorageState<number>(`${queryKey[1]}-skeletons`, {
         defaultValue: 0,
     });
 
@@ -36,12 +36,9 @@ const createBackupPoliciesListQueryClient = (mongoDatabaseId: number | undefined
         }
     });
 
-    const notifyBackupPolicyWasAdded = (policy: BackupPolicy) => {
+    const notifyBackupPolicyWasAdded = (policy: BackupPolicyWithRelations) => {
         queryClient.setQueryData(queryKey, (entries: QueryListEntry[]): QueryListEntry[] => {
-            const newEntries = [...entries, {
-                ...policy,
-                activeTask: null
-            }];
+            const newEntries = [...entries, policy];
             setSkeletonCount(newEntries.length);
             return newEntries;
         });

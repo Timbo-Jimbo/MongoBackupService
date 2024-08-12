@@ -70,7 +70,7 @@ function WorkBadge({
     <>
       {(task && !task.isComplete) && (
         <Badge variant={"outline"} className="animate-pulse">
-          <LoadingSpinner className="w-4 h-4 mr-2" />
+          <LoadingSpinner className="w-4 h-4 mr-1 -ml-1" />
           {task.associatedMongoDatabases.find(i => i.mongoDatabaseId == mongoDatabaseId)?.reason ?? "Working on a task"}
         </Badge>
       )}

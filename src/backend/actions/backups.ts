@@ -9,11 +9,24 @@ import { Compression } from "@backend/tasks/mongo-utils";
 import { TaskScheduler } from "@backend/tasks/task-scheduler";
 
 export const getAllBackups = withAuthOrRedirect(async () => {
-    return await database.query.backups.findMany({ orderBy: [desc(backups.id)] });
+    return await database.query.backups.findMany({ 
+        orderBy: [desc(backups.id)],
+        with: { 
+            mongoDatabase: true,
+            backupPolicy: true
+        }
+    });
 });
 
 export const getAllBackupsForDatabase = withAuthOrRedirect(async (mongoDatabaseId: number) => {
-    return await database.query.backups.findMany({where: eq(backups.mongoDatabaseId, mongoDatabaseId), orderBy: [desc(backups.id)] });
+    return await database.query.backups.findMany({
+        where: eq(backups.mongoDatabaseId, mongoDatabaseId), 
+        orderBy: [desc(backups.id)],
+        with: { 
+            mongoDatabase: true,
+            backupPolicy: true
+        }
+    });
 });
 
 export const deleteBackup = withAuthOrRedirect(async (id: number) => {

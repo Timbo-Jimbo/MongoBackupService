@@ -1,7 +1,6 @@
 "use client"
 
 import { Separator } from "@comp/separator";
-import { LoadingSpinner } from "@comp/loading-spinner";
 import { BackupCard } from "@/components/backup-card";
 import { useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
@@ -27,7 +26,7 @@ export function BackupList() {
       <CardContent>
         {isReady && backups.length === 0 && <p className="text-muted-foreground text-sm"><InfoCircledIcon className="w-4 h-4 mr-2 inline" />There are no Backups to show.</p>}
         {!isReady && (
-          <SkeletonList count={backupListQueryClient.skeletonCount} className="h-[7rem]">
+          <SkeletonList count={backupListQueryClient.skeletonCount} className="h-[8rem]">
           {/* <div className="flex flex-col">
             <div className="flex flex-row place-content-between">
               <Skeleton className="h-5 w-2/5" />

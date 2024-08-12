@@ -1,13 +1,14 @@
 import { relations } from "drizzle-orm";
 import { integer, sqliteTable, SQLiteUpdateSetSource, text } from "drizzle-orm/sqlite-core";
-import { mongoDatabases } from "./mongo-database.schema";
+import { MongoDatabase, mongoDatabases } from "./mongo-database.schema";
 import { sqliteStringEnum } from "@backend/utils";
 import { BackupMode } from "@backend/tasks/compression.enums";
-import { backups } from "./backup.schema";
+import { Backup, backups } from "./backup.schema";
 import { Task, tasks } from "./task.schema";
 
 export const backupPolicies = sqliteTable('backup_policies', {
     id: integer('id').primaryKey({autoIncrement: true}),
+    referenceName: text('reference_name').notNull().default("Backup Policy"),
     mongoDatabaseId: integer('mongo_database_id').notNull(),
     activeTaskId: integer('active_task_id'),
     backupIntervalCron: text('backup_interval_cron').notNull(),
@@ -33,4 +34,8 @@ export const backupPoliciesRelations = relations(backupPolicies, ({ one, many}) 
 export type BackupPolicy = typeof backupPolicies.$inferSelect;
 export type InsertBackupPolicy = typeof backupPolicies.$inferInsert;
 export type UpdateBackupPolicy = SQLiteUpdateSetSource<typeof backupPolicies>
-export type BackupPolicyWithActiveTask = BackupPolicy & { activeTask: Task | null };
+export type BackupPolicyWithRelations = BackupPolicy & { 
+    mongoDatabase: MongoDatabase,
+    backups: Backup[],
+    activeTask: Task | null 
+};

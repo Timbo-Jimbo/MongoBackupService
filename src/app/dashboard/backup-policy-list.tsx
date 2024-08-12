@@ -42,8 +42,8 @@ export function BackupPoliciesList() {
   return (
     <div className="ml-4 flex flex-col gap-2">
       <div className="flex flex-col">
-        <div className="font-bold flex justify-between items-center">
-          <span>Backup Policies</span>
+        <div className="flex place-items-center">
+          <h1 className="font-bold w-full">Backup Policies</h1>
           <div className="flex flex-row gap-2 place-items-center">
           {isShowingPoliciesForSingleDb && (
             <>
@@ -55,11 +55,12 @@ export function BackupPoliciesList() {
                 supportedOptions={backupListQueryClient.availableBackupModesQuery?.data ?? []}
                 open={addBackupPolicyDialogOpen}
                 onOpenChange={setAddBackupPolicyDialogOpen}
-                onCreatePolicy={(cronExpression: string, retentionDays: number, mode: BackupMode) => {
+                onCreatePolicy={(referenceName: string, cronExpression: string, retentionDays: number, mode: BackupMode) => {
                   setAddBackupPolicyDialogOpen(false);
                   const toastId = toast.loading("Creating backup policy...");
 
                   createBackupPolicyMutation.mutate({
+                    referenceName: referenceName,
                     mongoDatabaseId: mongoDatbaseId,
                     backupIntervalCron: cronExpression,
                     backupRetentionDays: retentionDays,
@@ -79,7 +80,7 @@ export function BackupPoliciesList() {
       <div>
         {isReady && results.length === 0 && <p className="text-muted-foreground text-sm"><InfoCircledIcon className="w-4 h-4 mr-2 inline" />There are no backup policies in place for this database.</p>}
         
-        {!isReady && <SkeletonList count={backupPolicyListClient.skeletonCount} className="h-[3rem]"/>}
+        {!isReady && <SkeletonList count={backupPolicyListClient.skeletonCount} className="h-[12rem]"/>}
         {results.map((backupPolicy, index, backupPolicies) => (
           <Fragment key={backupPolicy.id}>
             <BackupPolicyCard

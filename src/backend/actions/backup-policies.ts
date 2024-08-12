@@ -3,7 +3,7 @@
 import { database } from "@backend/db";
 import { desc, eq } from "drizzle-orm";
 import { withAuthOrRedirect } from "./utils";
-import { backupPolicies, InsertBackupPolicy } from "@backend/db/backup-policy.schema";
+import { backupPolicies, BackupPolicyWithRelations, InsertBackupPolicy } from "@backend/db/backup-policy.schema";
 import { mongoDatabases } from "@backend/db/mongo-database.schema";
 import { backups } from "@backend/db/backup.schema";
 import { deleteBackup } from "./backups";
@@ -16,7 +16,9 @@ export const getAllBackupPoliciesForDatabase = withAuthOrRedirect(async (mongoDa
         with: { 
             backupPolicies: {
                 with: {
-                    activeTask: true
+                    mongoDatabase: true,
+                    backups: true,
+                    activeTask: true,
                 }
             }
         }
@@ -27,7 +29,9 @@ export const getAllBackupPolicies = withAuthOrRedirect(async () => {
     return await database.query.backupPolicies.findMany({ 
         orderBy: [desc(backupPolicies.id)],
         with: { 
-            activeTask: true
+            mongoDatabase: true,
+            backups: true,
+            activeTask: true,
         }
      });
 });
@@ -37,13 +41,21 @@ export const createBackupPolicy = withAuthOrRedirect(async (backupPolicyValues:I
     const interval = cronParser.parseExpression(backupPolicyValues.backupIntervalCron);
     backupPolicyValues.nextBackupAt = interval.hasNext() ? new Date(interval.next().getTime()) : null;
     const [ newPolicy ] =  await database.insert(backupPolicies).values([backupPolicyValues]).returning();
-
     TaskScheduler.scheduleRun(newPolicy);
+
+    const newPolicyWithRelations = await database.query.backupPolicies.findFirst({
+        where: eq(backupPolicies.id, newPolicy.id),
+        with: { 
+            activeTask: true,
+            backups: true,
+            mongoDatabase: true
+        }
+    }) as BackupPolicyWithRelations;
 
     return {
         success: true,
         message: `Backup Policy Created`,
-        backupPolicy: newPolicy,
+        backupPolicy: newPolicyWithRelations,
     }
 });
 
@@ -51,11 +63,14 @@ export const deleteBackupPolicy = withAuthOrRedirect(async (id: number, deleteBa
     
     const backupPolicyToDelete = await database.query.backupPolicies.findFirst({
         where: eq(backupPolicies.id, id),
-        with: { backups: true }
+        with: { backups: true, activeTask: true }
     });
 
     if(!backupPolicyToDelete)
         return { success: false, message: `Backup Policy not found` };
+
+    if(backupPolicyToDelete.activeTask && !backupPolicyToDelete.activeTask.isComplete)
+        return { success: false, message: `Backup Policy is currently running` };
 
     for(const backup of backupPolicyToDelete.backups) {
         if(deleteBackups)

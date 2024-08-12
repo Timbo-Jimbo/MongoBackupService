@@ -74,6 +74,16 @@
 }
 
 @layer components {
+  .form-error > Label {
+    @apply text-rose-600
+  }
+
+  .form-error > Input {
+    @apply border-rose-600/50 bg-gradient-to-tr from-red-700/30 to-rose-800/40 placeholder:text-rose-600 focus:ring-1 focus:ring-rose-600
+  }
+}
+
+@layer components {
   
   .gradientborder-radius-none {
     --gradient-border-radius: 0 !important;

@@ -1,13 +1,15 @@
 import { deleteBackup } from "@actions/backups";
-import { Backup } from "@backend/db/backup.schema";
+import { Backup, BackupWithRelations } from "@backend/db/backup.schema";
 import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
 import { Button } from "@comp/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@comp/dropdown-menu";
 import { toast, toastForActionResult } from "@comp/toasts";
-import { ChartPieIcon, ClockIcon, DocumentIcon, Square3Stack3DIcon, TableCellsIcon, TrashIcon } from "@heroicons/react/20/solid";
+import { AdjustmentsHorizontalIcon, ChartPieIcon, ClockIcon, CogIcon, DocumentIcon, ScaleIcon, Square3Stack3DIcon, TableCellsIcon, TrashIcon } from "@heroicons/react/20/solid";
+import { CursorArrowRaysIcon, CalendarIcon } from "@heroicons/react/16/solid";
+import {} from "@heroicons/react/20/solid";
 import { useBackupListQueryClient } from "@lib/providers/backup-list-query-client";
 import { useMongoDatabaseListQueryClient } from "@lib/providers/mongo-database-list-query-client";
-import { cn, humanReadableEnumString, timeAgoString } from "@lib/utils";
+import { cn, humanReadableEnumString, timeAgoString, timeUntilString } from "@lib/utils";
 import { DotsVerticalIcon, DownloadIcon } from "@radix-ui/react-icons";
 import { useMutation } from "@tanstack/react-query";
 import prettyBytes from "pretty-bytes"
@@ -17,50 +19,36 @@ import { Badge } from "@comp/badge";
 import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
 import Link from "next/link";
 import { useLoadingToastCleaner } from "@lib/use-toast-cleaner";
+import { Statbox } from "./statbox";
+import humanizeDuration from "humanize-duration";
+import { useBackupPoliciesListQueryClient } from "@lib/providers/backup-policies-list-query-client";
 
 function Badges({
   backup,
   className
 }: {
-  backup: Backup,
+  backup: BackupWithRelations,
   className?: string
 }) {
   return (
     <div className={cn(["flex flex-row gap-2 size-fit", className])}>
-      <Badge variant={"secondary"}>
-        <ClockIcon className="w-4 h-4 mr-1 -ml-1" />
-        <DurationDisplay startTime={backup.startedAt} endTime={backup.finishedAt} />
-      </Badge>
-      <Badge variant={"secondary"} className="capitalize">
-      <span className="opacity-50 mr-1">Mode</span>{humanReadableEnumString(backup.mode)}
-      </Badge>
-      <Badge variant={"secondary"}>
-        <span className="opacity-50 mr-1">Trigger</span> {backup.backupPolicyId ? "Policy" : "Manual"}
-      </Badge>
-    </div>
-  );
-}
-
-interface TitleAndStatPassInIconProps {
-  Icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  title: string;
-  stat: string;
-  className?: string;
-}
-
-const TitleAndStat: React.FC<TitleAndStatPassInIconProps> = ({
-  title,
-  stat,
-  Icon,
-  className
-}) => {
-  return (
-    <div className={cn(["flex flex-row shrink-0", className])}>
-      {Icon && <Icon className="w-10 h-10 mr-3" />}
-      <div className="flex flex-col gap-0">
-        <span className="text-muted-foreground text-xs">{title}</span>
-        {stat} 
-      </div>
+      {!backup.backupPolicyId && (
+        <Badge variant={"secondary"}>
+          <CursorArrowRaysIcon className="w-4 h-4 mr-1 -ml-1" />
+          Created Manually
+        </Badge>
+      )}
+      {backup.backupPolicy && (
+        <Badge variant={"secondary"}>
+          <CalendarIcon className="w-4 h-4 mr-1 -ml-1" />
+          Created by Policy
+        </Badge>
+      )}
+      {backup.backupPolicy && (
+        <Badge variant={"destructive"}>
+          <span className="opacity-50 mr-1">Expires</span> {timeUntilString(new Date(backup.finishedAt.getTime() + backup.backupPolicy.backupRetentionDays * 86400000))}
+        </Badge>
+      )}
     </div>
   );
 }
@@ -68,11 +56,12 @@ const TitleAndStat: React.FC<TitleAndStatPassInIconProps> = ({
 export function BackupCard({
   backup,
 }: {
-  backup: Backup,
+  backup: BackupWithRelations,
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const backupListQueryClient = useBackupListQueryClient(); 
   const mongoDatabaseListQueryClient = useMongoDatabaseListQueryClient();
+  const backupPoliciesListQueryClient = useBackupPoliciesListQueryClient();
   const loadingToastRef = useLoadingToastCleaner();
 
   const deleteBackupMutation = useMutation({
@@ -85,9 +74,12 @@ export function BackupCard({
 
       backupListQueryClient.notifyBackupWasDeleted(backup.id);
       mongoDatabaseListQueryClient.notifyDatabasesPotentiallyDirty();
+      backupPoliciesListQueryClient.notifyBackupPoliciesPotentiallyDirty();
     }
   });
   
+  const msToComplete = backup.finishedAt.getTime() - backup.startedAt.getTime();
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-row flex-grow gap-2">
@@ -137,11 +129,15 @@ export function BackupCard({
             </div>
           </div>
           <Badges className="inline-flex lg:hidden" backup={backup} />
-          <div className="w-full gap-4 py-4 grid grid-cols-2 lg:flex lg:flex-row lg:place-content-between">
-            <TitleAndStat title="Database Name" stat={backup.sourceMetadata.databaseName} Icon={Square3Stack3DIcon} />
-            <TitleAndStat title="Documents" stat={backup.sourceMetadata.collections.reduce((acc, c) => acc + c.documentCount, 0).toLocaleString()} Icon={DocumentIcon} />
-            <TitleAndStat title="Collections" stat={backup.sourceMetadata.collections.length.toLocaleString()} Icon={TableCellsIcon} />
-            <TitleAndStat title="Size" stat={prettyBytes(backup.sizeBytes)} Icon={ChartPieIcon} />
+          <div className="w-full gap-4 grid grid-cols-2 lg:grid-cols-3 py-4">
+            <Statbox className="col-span-1" title="Database Name" stat={backup.sourceMetadata.databaseName} Icon={Square3Stack3DIcon} />
+            <Statbox className="col-span-1" title="Documents" stat={backup.sourceMetadata.collections.reduce((acc, c) => acc + c.documentCount, 0).toLocaleString()} Icon={DocumentIcon} />
+            <Statbox className="col-span-1" title="Collections" stat={backup.sourceMetadata.collections.length.toLocaleString()} Icon={TableCellsIcon} />
+            <Statbox className="col-span-1" title="Completed In" stat={humanizeDuration(msToComplete)} Icon={ClockIcon} />
+            <Statbox className="col-span-1 capitalize" title="Mode" stat={humanReadableEnumString(backup.mode)} Icon={AdjustmentsHorizontalIcon} />
+            <Statbox className="col-span-1" title="Size" stat={`${prettyBytes(backup.sizeBytes)}`} Icon={ChartPieIcon} />
+            {/* <Statbox className="col-span-1" title="Trigger" stat={backup.backupPolicy ? "Backup Policy" : "Manual"} Icon={CogIcon} /> */}
+            {/* <Statbox className="col-span-1" title="Backup Rate" stat={} Icon={ChartPieIcon} /> */}
           </div>
         </div>
       </div>
