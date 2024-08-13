@@ -22,6 +22,7 @@ import { DialogStartManualBackup } from "./dialog-start-manual-backup";
 import { BackupPoliciesListQueryClientProvider } from "@lib/providers/backup-policies-list-query-client";
 import { BackupPoliciesList } from "@app/dashboard/backup-policy-list";
 import { useLoadingToastCleaner } from "@lib/use-toast-cleaner";
+import { GlobeAmericasIcon, LinkIcon } from "@heroicons/react/16/solid";
 
 type Ping = {
   isPending: boolean,
@@ -92,6 +93,10 @@ function Badges({
   return (
     <div className={cn(["flex flex-row gap-2 size-fit", className])}>
       <ConnectionBadge ping={ping}/>
+      <Badge variant={"secondary"} className="transition-all duration-500 flex-grow justify-center">
+        <GlobeAmericasIcon className="w-4 h-4 mr-1 -ml-1" />
+        URL <span className="opacity-50 ml-1">{mongoDatabase.censoredConnectionUri.split("@")[1]}</span>
+      </Badge>
       <WorkBadge mongoDatabaseId={mongoDatabase.id} task={latestTask}/>
     </div>
   )
@@ -367,9 +372,6 @@ export function MongoDatabaseCard({
         </div>
       </div>
       <Badges className="inline-flex flex-wrap lg:hidden" ping={ping} mongoDatabase={mongoDatabase} latestTask={latestTask}/>
-      <div className="flex flex-row gap-2 place-items-center">
-        <p className="text-sm text-muted-foreground">{mongoDatabase.censoredConnectionUri}</p>
-      </div>
       <div className="mt-2">
         <BackupPoliciesListQueryClientProvider databaseId={mongoDatabase.id}>
           <BackupPoliciesList />
