@@ -14,7 +14,7 @@ const font = Font({
 })
 
 export const metadata: Metadata = {
-  title: "Railway MongoDB Backups",
+  title: "Mongo Backup Service",
 };
 
 export const viewport: Viewport = {

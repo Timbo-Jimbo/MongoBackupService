@@ -44,7 +44,7 @@ function Badges({
           {humanReadableEnumString(task.state)}
         </Badge>
       )}
-      {task.associatedBackupPolicyId !== undefined && (
+      {task.associatedBackupPolicy !== undefined && (
         <Badge variant={"secondary"} className="flex-grow justify-center">
           <SparklesIcon className="w-4 h-4 mr-1 -ml-1" />
           Triggered by Policy 

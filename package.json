@@ -1,5 +1,5 @@
 {
-  "name": "railway-mongodb-backups",
+  "name": "mongo-backup-service",
   "version": "0.1.0",
   "private": true,
   "scripts": {
