@@ -244,41 +244,43 @@ export function MongoDatabaseCard({
                         <DropdownMenuSubTrigger>
                           From Other...
                         </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
-                          {otherDatabases.map((otherDatabase, index) => (
-                            <Fragment key={otherDatabase.mongoDatabase.id}>
-                              <DropdownMenuLabel>
-                                {otherDatabase.mongoDatabase.referenceName}
-                              </DropdownMenuLabel>
-                              {otherDatabase.backups.map((backup) => (
-                                <DropdownMenuItem 
-                                  key={backup.id}
-                                  onClick={() => {
-                                    const toastId = toast.loading("Initiating restore...");
-                                    restoreBackupMutation.mutate(backup.id, {
-                                      onSettled: () => {
-                                        toast.dismiss(toastId);
-                                      }
-                                    });
-                                  }}
-                                >
-                                  From {timeAgoString(backup.finishedAt)}
-                                </DropdownMenuItem>    
-                              ))}
-                              {otherDatabase.backups.length == 0 && (
-                                <DropdownMenuItem disabled>
-                                  No backups available
-                                </DropdownMenuItem>
-                              )}
-                              {index < otherDatabases.length - 1 && <DropdownMenuSeparator/>}
-                            </Fragment>
-                          ))}
-                          {otherDatabases.length == 0 && (
-                            <DropdownMenuItem disabled>
-                              No Other Databases
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuSubContent>
+                        <DropdownMenuPortal>
+                          <DropdownMenuSubContent>
+                            {otherDatabases.map((otherDatabase, index) => (
+                              <Fragment key={otherDatabase.mongoDatabase.id}>
+                                <DropdownMenuLabel>
+                                  {otherDatabase.mongoDatabase.referenceName}
+                                </DropdownMenuLabel>
+                                {otherDatabase.backups.map((backup) => (
+                                  <DropdownMenuItem 
+                                    key={backup.id}
+                                    onClick={() => {
+                                      const toastId = toast.loading("Initiating restore...");
+                                      restoreBackupMutation.mutate(backup.id, {
+                                        onSettled: () => {
+                                          toast.dismiss(toastId);
+                                        }
+                                      });
+                                    }}
+                                  >
+                                    From {timeAgoString(backup.finishedAt)}
+                                  </DropdownMenuItem>    
+                                ))}
+                                {otherDatabase.backups.length == 0 && (
+                                  <DropdownMenuItem disabled>
+                                    No backups available
+                                  </DropdownMenuItem>
+                                )}
+                                {index < otherDatabases.length - 1 && <DropdownMenuSeparator/>}
+                              </Fragment>
+                            ))}
+                            {otherDatabases.length == 0 && (
+                              <DropdownMenuItem disabled>
+                                No Other Databases
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
                       </DropdownMenuSub>
                     </DropdownMenuSubContent>
                   </DropdownMenuPortal>
