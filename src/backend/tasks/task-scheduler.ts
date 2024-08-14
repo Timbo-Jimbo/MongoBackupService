@@ -113,10 +113,7 @@ export class TaskScheduler {
 
         const deleteAt = new Date((backupPolicy.backupRetentionDays * 24 * 60 * 60 * 1000) + backup.finishedAt.getTime())
         console.log(`Backup ${backup.id} is scheduled to be deleted in ${timeUntilString(deleteAt)} (${deleteAt.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })})`); 
-        let timeTillDelete = deleteAt.getTime() - new Date().getTime();
-
-        //hack, change to 10 seconds
-        timeTillDelete = 10000;
+        const timeTillDelete = deleteAt.getTime() - new Date().getTime();
 
         const intervalId = setTimeout(async () => {
 
