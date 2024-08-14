@@ -1,5 +1,6 @@
 import { UserAuth } from "@backend/user-auth";
 import { mockDelay } from "@lib/utils";
+import { requestAsyncStorage } from "next/dist/client/components/request-async-storage-instance";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -19,22 +20,28 @@ export function withAuthOrRedirect<T extends any[], R>(
 
 export function validAuthOrRedirect(redirectTo?: string | undefined) {
 
-    if(!UserAuth.isAuthenticated()) {
-        
-        const searchParams = new URLSearchParams();
-        searchParams.set("login-prompt", "true");
+  // This allows us to invoke server action logic outside of a request,
+  // ie from a scheduled task 
+  const isInsideRequestScope = requestAsyncStorage.getStore() !== undefined;
+  if(!isInsideRequestScope)
+    return;
 
-        if(!redirectTo) {
-          
-          const headerUrl = headers().get("x-url");
-          const headerOrigin = headers().get("x-origin");        
-          const pathWithParams = headerUrl?.substring(headerOrigin?.length || 0);
-          redirectTo = pathWithParams;
-        }
+  if(!UserAuth.isAuthenticated()) {
+      
+    const searchParams = new URLSearchParams();
+    searchParams.set("login-prompt", "true");
 
-        if(redirectTo && redirectTo !== "/") 
-          searchParams.set("redirect", redirectTo);
-
-        redirect("/login?" + searchParams.toString());
+    if(!redirectTo) {
+      
+      const headerUrl = headers().get("x-url");
+      const headerOrigin = headers().get("x-origin");        
+      const pathWithParams = headerUrl?.substring(headerOrigin?.length || 0);
+      redirectTo = pathWithParams;
     }
+
+    if(redirectTo && redirectTo !== "/") 
+      searchParams.set("redirect", redirectTo);
+
+    redirect("/login?" + searchParams.toString());
+  }
 }
