@@ -22,6 +22,7 @@ export enum TaskType {
     ManualBackup = 'manual_backup',
     Restore = 'restore',
     Import = 'import',
+    DeleteBackup = 'delete_backup',
 }
 
 export interface TaskUncertainProgress 
@@ -51,6 +52,7 @@ export const tasks = sqliteTable('tasks', {
     id: integer('id').primaryKey({autoIncrement: true}),
     type: text('type', { enum: sqliteStringEnum(TaskType) }).$type<TaskType>().notNull(),
     isComplete: integer('is_complete', {mode: 'boolean'}).notNull().default(false),
+    associatedBackupPolicyId: integer('associated_backup_policy_id'),
     state: text('state', { enum: sqliteStringEnum(TaskState) }).$type<TaskState>().notNull().default(TaskState.Running),
     cancellationType: text('cancellation_type', { enum: sqliteStringEnum(TaskCancellationType) }).notNull().default(TaskCancellationType.NotCancellable),
     cancelRequested: integer('cancel_requested', {mode: 'boolean'}).notNull().default(false),
@@ -67,7 +69,10 @@ type TaskRelations<TMongoDatabase, TBackupPolicy> = {
 
 export const tasksRelations = relations(tasks, ({ many, one }) => ({
     associatedMongoDatabases: many(mongoDatabasesToTasks),
-    associatedBackupPolicy: one(backupPolicies),
+    associatedBackupPolicy: one(backupPolicies, {
+        fields: [tasks.associatedBackupPolicyId],
+        references: [backupPolicies.id]
+    }),
 } satisfies TaskRelations<Relation, Relation>));
 
 

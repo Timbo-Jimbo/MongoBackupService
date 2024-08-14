@@ -81,6 +81,8 @@ export function BackupPolicyCard({
       toastForActionResult(result);
       if(!result?.success) return;
       backupPoliciesListQueryClient.notifyBackupPolicyWasDeleted(backupPolicy.id);
+      backupListQueryClient.notifyBackupsPotentiallyDirty();
+      taskListQueryClient?.notifyTaskWasAdded();
     }
   });
 

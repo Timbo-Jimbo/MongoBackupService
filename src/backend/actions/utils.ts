@@ -20,12 +20,6 @@ export function withAuthOrRedirect<T extends any[], R>(
 
 export function validAuthOrRedirect(redirectTo?: string | undefined) {
 
-  // This allows us to invoke server action logic outside of a request,
-  // ie from a scheduled task 
-  const isInsideRequestScope = requestAsyncStorage.getStore() !== undefined;
-  if(!isInsideRequestScope)
-    return;
-
   if(!UserAuth.isAuthenticated()) {
       
     const searchParams = new URLSearchParams();

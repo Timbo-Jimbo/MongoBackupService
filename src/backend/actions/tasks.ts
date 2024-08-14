@@ -54,10 +54,17 @@ export const deleteTask = withAuthOrRedirect(async (id: number) => {
 });
 
 export const deleteAllCompletedTasks = withAuthOrRedirect(async () => {
-    const result = await database.delete(tasks).where(eq(tasks.isComplete, true)).returning();
+    
+    const allCompletedTasks = await database.query.tasks.findMany({ where: eq(tasks.isComplete, true) });
+    if(allCompletedTasks.length === 0) return { success: true, message: `No tasks to clear`, clearedTaskIds: [] };
+
+    await database.delete(tasks).where(eq(tasks.isComplete, true));
+    await database.delete(mongoDatabasesToTasks).where(inArray(mongoDatabasesToTasks.taskId, allCompletedTasks.map(x => x.id)));
+    await database.update(backupPolicies).set({ activeTaskId: null }).where(inArray(backupPolicies.activeTaskId, allCompletedTasks.map(x => x.id)));
+
     return { 
         success: true, 
         message: `Cleared all completed tasks`,
-        clearedTaskIds: result.map(x => x.id)
+        clearedTaskIds: allCompletedTasks.map(x => x.id)
     };
 });

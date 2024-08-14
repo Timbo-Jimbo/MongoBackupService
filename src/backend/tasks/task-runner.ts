@@ -108,7 +108,8 @@ export class TaskRunner
         reason: involvementReason
       }));
 
-      await tx.insert(mongoDatabasesToTasks).values(connections).returning();
+      if(connections.length > 0)
+        await tx.insert(mongoDatabasesToTasks).values(connections).returning();
 
       return taskId;
     });

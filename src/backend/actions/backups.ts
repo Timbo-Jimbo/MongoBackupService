@@ -4,9 +4,10 @@ import { database } from "@backend/db";
 import { desc, eq } from "drizzle-orm";
 import { withAuthOrRedirect } from "./utils";
 import { backups } from "@backend/db/backup.schema";
-import { unlinkSync } from "node:fs";
 import { Compression } from "@backend/tasks/mongo-utils";
-import { TaskScheduler } from "@backend/tasks/task-scheduler";
+import { TaskRunner } from "@backend/tasks/task-runner";
+import { MongoDeleteBackupExecutor } from "@backend/tasks/mongo-delete-backup";
+import { TaskType } from "@backend/db/task.schema";
 
 export const getAllBackups = withAuthOrRedirect(async () => {
     return await database.query.backups.findMany({ 
@@ -29,25 +30,18 @@ export const getAllBackupsForDatabase = withAuthOrRedirect(async (mongoDatabaseI
     });
 });
 
-export const deleteBackup = withAuthOrRedirect(async (id: number) => {
-    const backup = await database.query.backups.findFirst({ where: eq(backups.id, id) });
+export const startDeleteBackupTask = withAuthOrRedirect(async (id: number) => {
+    
+    const taskId = await TaskRunner.startTask({
+        executorClass: MongoDeleteBackupExecutor,
+        executorParams: { backupIdsToDelete: [id] },
+        taskType: TaskType.DeleteBackup,
+    });
 
-    if(backup) {
-        await database.delete(backups).where(eq(backups.id, id)).execute();
-        TaskScheduler.clearScheduledDelete(backup);
-        unlinkSync(backup.archivePath);
-        console.log(`Deleted backup ${backup.archivePath}`);
-        return { 
-            success: true,
-            message: `Deleted backup`
-        };
-    }
-    else 
-    {
-        return { 
-            success: false,
-            message: `Backup not found`
-        };
+    return {
+        success: true,
+        message: `Backup deletion task started`,
+        taskId: taskId
     }
 });
 

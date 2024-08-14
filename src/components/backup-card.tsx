@@ -1,4 +1,3 @@
-import { deleteBackup } from "@actions/backups";
 import { BackupWithRelations } from "@backend/db/backup.schema";
 import { AlertDialog, AlertGenericConfirmationDialogContent } from "@comp/alert-dialog";
 import { Button } from "@comp/button";
@@ -21,6 +20,8 @@ import { useLoadingToastCleaner } from "@lib/use-toast-cleaner";
 import { Statbox } from "./statbox";
 import humanizeDuration from "humanize-duration";
 import { useBackupPoliciesListQueryClient } from "@lib/providers/backup-policies-list-query-client";
+import { startDeleteBackupTask } from "@actions/backups";
+import { useTaskListQueryClient } from "@lib/providers/task-list-query-client";
 
 function Badges({
   backup,
@@ -87,19 +88,21 @@ export function BackupCard({
   const backupListQueryClient = useBackupListQueryClient(); 
   const mongoDatabaseListQueryClient = useMongoDatabaseListQueryClient();
   const backupPoliciesListQueryClient = useBackupPoliciesListQueryClient();
+  const taskListQueryClient = useTaskListQueryClient();
   const loadingToastRef = useLoadingToastCleaner();
 
   const deleteBackupMutation = useMutation({
-    mutationFn: async () => await deleteBackup(backup.id),
+    mutationFn: async () => await startDeleteBackupTask(backup.id),
     onSuccess: (result) => {
 
       toastForActionResult(result);
 
       if(!result?.success) return;
 
-      backupListQueryClient.notifyBackupWasDeleted(backup.id);
+      backupListQueryClient.notifyBackupsPotentiallyDirty();
       mongoDatabaseListQueryClient.notifyDatabasesPotentiallyDirty();
       backupPoliciesListQueryClient.notifyBackupPoliciesPotentiallyDirty();
+      taskListQueryClient.notifyTaskWasAdded();
     }
   });
   

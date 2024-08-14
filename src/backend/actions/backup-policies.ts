@@ -5,10 +5,11 @@ import { desc, eq } from "drizzle-orm";
 import { withAuthOrRedirect } from "./utils";
 import { backupPolicies, BackupPolicyWithRelations, InsertBackupPolicy } from "@backend/db/backup-policy.schema";
 import { mongoDatabases } from "@backend/db/mongo-database.schema";
-import { backups } from "@backend/db/backup.schema";
-import { deleteBackup } from "./backups";
 import { TaskScheduler } from "@backend/tasks/task-scheduler";
 import cronParser from "cron-parser";
+import { TaskRunner } from "@backend/tasks/task-runner";
+import { MongoDeleteBackupExecutor } from "@backend/tasks/mongo-delete-backup";
+import { TaskType } from "@backend/db/task.schema";
 
 export const getAllBackupPoliciesForDatabase = withAuthOrRedirect(async (mongoDatabaseId: number) => {
     return (await database.query.mongoDatabases.findFirst({ 
@@ -74,9 +75,11 @@ export const deleteBackupPolicy = withAuthOrRedirect(async (id: number, deleteBa
 
     if(deleteBackups)
     {
-        for(const backup of backupPolicyToDelete.backups) {
-            await deleteBackup(backup.id);
-        }
+        await TaskRunner.startTask({
+            executorClass: MongoDeleteBackupExecutor,
+            executorParams: { backupIdsToDelete: backupPolicyToDelete.backups.map(b => b.id) },
+            taskType: TaskType.DeleteBackup,
+        });
     }
        
     TaskScheduler.clearScheduledRun(backupPolicyToDelete);
